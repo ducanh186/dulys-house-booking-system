@@ -1,0 +1,67 @@
+# Dependencies
+backend/vendor/
+frontend/node_modules/
+backend/node_modules/
+
+# Environment
+backend/.env
+backend/.env.backup
+backend/.env.production
+.env
+
+# Build outputs
+frontend/dist/
+frontend/dist-ssr/
+backend/public/build/
+backend/public/hot
+backend/public/storage
+
+# Laravel
+backend/storage/*.key
+backend/storage/pail
+backend/*.log
+backend/.phpunit.result.cache
+backend/.phpunit.cache
+backend/bootstrap/cache/services.php
+backend/bootstrap/cache/packages.php
+
+# IDE
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+*.local
+
+# Docker
+docker-data/
+
+# CLAUDE.md files (local AI context, not committed)
+**/CLAUDE.md
+
+# Temp files
+*.tmp
+*.temp
+*.bak
+
+# Frontend reference screens (provisioned into src/, not committed directly)
+frontend/_screens/
+
+# Additional env files
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Misc
+*.log
+npm-debug.log*
+yarn-debug.log*
