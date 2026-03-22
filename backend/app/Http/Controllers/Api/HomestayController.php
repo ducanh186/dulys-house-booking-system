@@ -16,6 +16,9 @@ class HomestayController extends Controller
     {
         $homestays = Homestay::where('is_active', true)
             ->withCount('roomTypes')
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
+            ->withMin('roomTypes', 'nightly_rate')
             ->paginate(12);
 
         return $this->paginated($homestays, data: HomestayResource::collection($homestays->getCollection()));

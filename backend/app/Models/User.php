@@ -53,4 +53,9 @@ class User extends Authenticatable
     {
         return in_array($this->role, ['admin', 'owner', 'staff']);
     }
+
+    public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

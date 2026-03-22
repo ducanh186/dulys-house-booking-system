@@ -7,6 +7,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\PasswordResetOtpService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\Auth;
 class AuthController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(
+        protected PasswordResetOtpService $passwordResetOtp,
+    ) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -69,5 +74,58 @@ class AuthController extends Controller
         $user = $request->user()->load('customer', 'staff');
 
         return $this->success($user);
+    }
+
+    public function requestForgotPasswordOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $this->passwordResetOtp->request($validated['email']);
+
+        return $this->success(
+            null,
+            'Nếu email tồn tại trong hệ thống, mã OTP đã được gửi.'
+        );
+    }
+
+    public function resendForgotPasswordOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        try {
+            $this->passwordResetOtp->resend($validated['email']);
+        } catch (\RuntimeException $exception) {
+            return $this->error($exception->getMessage(), $exception->getCode() ?: 400);
+        }
+
+        return $this->success(
+            null,
+            'Nếu email tồn tại trong hệ thống, mã OTP mới đã được gửi.'
+        );
+    }
+
+    public function verifyForgotPasswordOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|digits:6',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        try {
+            $this->passwordResetOtp->verify(
+                $validated['email'],
+                $validated['otp'],
+                $validated['password'],
+            );
+        } catch (\RuntimeException $exception) {
+            return $this->error($exception->getMessage(), $exception->getCode() ?: 400);
+        }
+
+        return $this->success(null, 'Đặt lại mật khẩu thành công.');
     }
 }

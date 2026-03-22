@@ -28,6 +28,7 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
+      APP_URL: "http://localhost"
       LOG_CHANNEL: stderr
       APP_KEY: "${APP_KEY:-base64:flh+d1U3MR/aQKI42cLcikmtQTa/kQC76q6eAntkAxU=}"
       DB_CONNECTION: mysql
@@ -36,6 +37,10 @@ services:
       DB_DATABASE: dulys_house
       DB_USERNAME: root
       DB_PASSWORD: secret
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      BCRYPT_ROUNDS: "12"
     volumes:
       - backend-storage:/var/www/storage
     healthcheck:

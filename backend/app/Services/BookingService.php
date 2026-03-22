@@ -18,6 +18,7 @@ class BookingService
         protected AvailabilityService $availability,
         protected BookingExpiryService $bookingExpiry,
         protected PricingService $pricing,
+        protected NotificationService $notifications,
     ) {}
 
     /**
@@ -34,6 +35,11 @@ class BookingService
             $checkOut = Carbon::parse($data['check_out']);
             $totalAmount = 0;
             $details = [];
+
+            // Pessimistic lock: lock rooms for update to prevent concurrent bookings
+            foreach ($data['rooms'] as $room) {
+                Room::where('room_type_id', $room['room_type_id'])->lockForUpdate()->get();
+            }
 
             // Validate availability and calculate prices for each room type
             foreach ($data['rooms'] as $room) {
@@ -83,7 +89,11 @@ class BookingService
                 'status' => 'pending',
             ]);
 
-            return $booking->load('details.roomType.homestay', 'payments', 'customer');
+            $booking = $booking->load('details.roomType.homestay', 'payments', 'customer');
+
+            try { $this->notifications->notifyBookingCreated($booking); } catch (\Throwable) {}
+
+            return $booking;
         });
     }
 
@@ -100,7 +110,10 @@ class BookingService
             'expires_at' => null,
         ]);
 
-        return $booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        try { $this->notifications->notifyBookingConfirmed($booking); } catch (\Throwable) {}
+
+        return $booking;
     }
 
     /**
@@ -146,7 +159,10 @@ class BookingService
                 'expires_at' => null,
             ]);
 
-            return $booking->fresh('details.room', 'details.assignedRooms', 'details.roomType.homestay', 'customer', 'payments');
+            $booking = $booking->fresh('details.room', 'details.assignedRooms', 'details.roomType.homestay', 'customer', 'payments');
+            try { $this->notifications->notifyCheckIn($booking); } catch (\Throwable) {}
+
+            return $booking;
         });
     }
 
@@ -183,7 +199,10 @@ class BookingService
                 'paid_at' => now(),
             ]);
 
-            return $booking->fresh('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'customer', 'payments');
+            $booking = $booking->fresh('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'customer', 'payments');
+            try { $this->notifications->notifyCheckOut($booking); } catch (\Throwable) {}
+
+            return $booking;
         });
     }
 
@@ -203,7 +222,10 @@ class BookingService
         // Cancel pending payments
         $booking->payments()->where('status', 'pending')->update(['status' => 'failed']);
 
-        return $booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        try { $this->notifications->notifyBookingCancelled($booking); } catch (\Throwable) {}
+
+        return $booking;
     }
 
     public function generateBookingCode(): string

@@ -8,7 +8,6 @@ import {
   Users,
   ChevronLeft,
   AlertCircle,
-  ImageOff,
   Minus,
   Plus,
 } from 'lucide-react';
@@ -18,12 +17,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from '../../components/ui/badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
+import ImagePlaceholder from '../../components/common/ImagePlaceholder';
 import { cn } from '../../lib/utils';
+import ReviewSection from '../../components/ReviewSection';
+import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function HomestayDetailPage() {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { showToast } = useToast();
 
   const checkIn = searchParams.get('check_in') || '';
   const checkOut = searchParams.get('check_out') || '';
@@ -64,19 +69,38 @@ export default function HomestayDetailPage() {
     return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
   }
 
-  function handleBook(roomType) {
+  function handleRoomAction(roomType) {
     const qty = quantities[roomType.id] || 1;
-    navigate('/booking', {
-      state: {
-        homestayId: homestay.id,
-        homestayName: homestay.name,
-        roomTypeId: roomType.id,
-        roomTypeName: roomType.name,
-        checkIn,
-        checkOut,
-        nightlyRate: roomType.nightly_rate,
-        quantity: qty,
-      },
+    const target = {
+      pathname: `/homestays/${slug}/rooms/${roomType.id}`,
+      search: buildSearchParams(checkIn, checkOut),
+    };
+    const bookingIntent = {
+      homestayId: homestay.id,
+      homestaySlug: slug,
+      homestayName: homestay.name,
+      roomTypeId: roomType.id,
+      roomTypeName: roomType.name,
+      roomImage: roomType.rooms?.find((room) => room.main_image)?.main_image || roomType.thumbnail || homestay.thumbnail,
+      checkIn,
+      checkOut,
+      nightlyRate: roomType.nightly_rate,
+      quantity: qty,
+    };
+
+    if (!isAuthenticated) {
+      showToast('Bạn cần đăng nhập để đặt phòng', 'warning');
+      navigate('/login', {
+        state: {
+          from: target,
+          bookingIntent,
+        },
+      });
+      return;
+    }
+
+    navigate(`${target.pathname}${target.search}`, {
+      state: { bookingIntent },
     });
   }
 
@@ -124,10 +148,7 @@ export default function HomestayDetailPage() {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-on-surface-variant">
-            <ImageOff className="h-16 w-16" />
-            <span className="text-sm">Chưa có ảnh</span>
-          </div>
+          <ImagePlaceholder name={homestay.name} className="h-full w-full" size="lg" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <button
@@ -218,12 +239,15 @@ export default function HomestayDetailPage() {
                   nights={nights}
                   quantity={quantities[rt.id] || 1}
                   onChangeQty={(delta) => changeQty(rt.id, delta)}
-                  onBook={() => handleBook(rt)}
+                  onBook={() => handleRoomAction(rt)}
                 />
               ))}
             </div>
           )}
         </div>
+
+        {/* Reviews Section */}
+        <ReviewSection homestaySlug={slug} />
       </div>
     </div>
   );
@@ -233,19 +257,17 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
   const totalPrice = roomType.nightly_rate * nights * quantity;
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col hover:shadow-lg transition-shadow duration-200 group">
       {/* Room image */}
-      <div className="h-40 bg-surface-container-highest rounded-t-[32px] overflow-hidden">
+      <div className="h-40 rounded-t-[32px] overflow-hidden">
         {roomType.thumbnail ? (
           <img
             src={roomType.thumbnail}
             alt={roomType.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center">
-            <BedDouble className="h-8 w-8 text-on-surface-variant" />
-          </div>
+          <ImagePlaceholder name={roomType.name} className="h-full w-full" size="md" />
         )}
       </div>
 
@@ -274,44 +296,50 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
         )}
       </CardContent>
 
-      {hasDateParams && (
-        <CardFooter className="flex flex-col gap-3 border-t border-border pt-4">
-          {/* Quantity selector */}
-          <div className="flex items-center justify-between w-full">
-            <span className="text-sm text-on-surface-variant">Số lượng phòng:</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onChangeQty(-1)}
-                disabled={quantity <= 1}
-                className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-surface-container transition-colors disabled:opacity-40"
-                aria-label="Giảm số lượng"
-              >
-                <Minus className="h-3 w-3" />
-              </button>
-              <span className="w-6 text-center font-semibold text-on-surface">{quantity}</span>
-              <button
-                onClick={() => onChangeQty(1)}
-                className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-surface-container transition-colors"
-                aria-label="Tăng số lượng"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
+      <CardFooter className="flex flex-col gap-3 border-t border-border pt-4">
+        <div className="w-full space-y-3">
+          {hasDateParams ? (
+            <>
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm text-on-surface-variant">Số lượng phòng:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onChangeQty(-1)}
+                    disabled={quantity <= 1}
+                    className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-surface-container transition-colors disabled:opacity-40"
+                    aria-label="Giảm số lượng"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <span className="w-6 text-center font-semibold text-on-surface">{quantity}</span>
+                  <button
+                    onClick={() => onChangeQty(1)}
+                    className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-surface-container transition-colors"
+                    aria-label="Tăng số lượng"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
 
-          {/* Total */}
-          <div className="flex items-center justify-between w-full">
-            <span className="text-sm text-on-surface-variant">{nights} đêm x {quantity} phòng:</span>
-            <span className="font-bold text-on-surface text-lg">
-              <PriceDisplay amount={totalPrice} />
-            </span>
-          </div>
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm text-on-surface-variant">{nights} đêm x {quantity} phòng:</span>
+                <span className="font-bold text-on-surface text-lg">
+                  <PriceDisplay amount={totalPrice} />
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+              Chọn ngày nhận và trả phòng ở trang chi tiết để xem mức giá và tiếp tục đặt phòng.
+            </div>
+          )}
 
           <Button onClick={onBook} className="w-full">
-            Đặt phòng
+            Xem chi tiết phòng
           </Button>
-        </CardFooter>
-      )}
+        </div>
+      </CardFooter>
     </Card>
   );
 }
@@ -320,4 +348,12 @@ function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function buildSearchParams(checkIn, checkOut) {
+  const params = new URLSearchParams();
+  if (checkIn) params.set('check_in', checkIn);
+  if (checkOut) params.set('check_out', checkOut);
+  const str = params.toString();
+  return str ? `?${str}` : '';
 }

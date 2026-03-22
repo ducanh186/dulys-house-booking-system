@@ -72,7 +72,7 @@ class BookingController extends Controller
         }
 
         $bookings = Booking::where('customer_id', $customer->id)
-            ->with('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments', 'customer')
+            ->with('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments', 'customer', 'review')
             ->orderByDesc('created_at')
             ->paginate(10);
 
@@ -89,7 +89,7 @@ class BookingController extends Controller
             return $this->error('Không tìm thấy đơn đặt phòng.', 404);
         }
 
-        $booking->load('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments', 'customer');
+        $booking->load('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments', 'customer', 'review');
 
         return $this->success(new BookingResource($booking));
     }

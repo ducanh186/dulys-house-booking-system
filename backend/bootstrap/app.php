@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckRole;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,8 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
         ]);
-
-        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(function (ModelNotFoundException $e) {
@@ -51,5 +50,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => 'Dữ liệu không hợp lệ.',
                 'errors' => $e->errors(),
             ], 422);
+        });
+
+        $exceptions->renderable(function (ThrottleRequestsException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn thao tác quá nhanh. Vui lòng chờ một chút rồi thử lại.',
+            ], 429, $e->getHeaders());
         });
     })->create();

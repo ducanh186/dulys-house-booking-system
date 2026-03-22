@@ -77,6 +77,78 @@
   .sunlight-gradient {
     background: linear-gradient(135deg, #6e5900 0%, #fbd12d 100%);
   }
+
+  .admin-shell-bg {
+    background:
+      radial-gradient(circle at top left, rgba(251, 209, 45, 0.28), transparent 32%),
+      radial-gradient(circle at top right, rgba(61, 125, 167, 0.14), transparent 28%),
+      linear-gradient(180deg, #eef9ff 0%, #edf8ff 42%, #e7f3fb 100%);
+  }
+
+  .admin-glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(159, 176, 185, 0.22);
+    box-shadow:
+      0 24px 80px rgba(33, 49, 56, 0.12),
+      0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  }
+
+  .admin-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(159, 176, 185, 0.2);
+    box-shadow:
+      0 18px 60px rgba(33, 49, 56, 0.08),
+      0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  }
+
+  .admin-card-soft {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(227, 243, 251, 0.82));
+    border: 1px solid rgba(159, 176, 185, 0.18);
+    box-shadow: 0 18px 48px rgba(33, 49, 56, 0.08);
+  }
+
+  .admin-nav-link {
+    position: relative;
+    border-radius: 18px;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .admin-nav-link:hover {
+    transform: translateX(2px);
+  }
+
+  .admin-nav-link-active {
+    background: linear-gradient(135deg, rgba(251, 209, 45, 0.18), rgba(241, 243, 246, 0.95));
+    color: #213138;
+    box-shadow: 0 10px 24px rgba(33, 49, 56, 0.08);
+  }
+
+  .admin-kicker {
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 0.69rem;
+    font-weight: 800;
+  }
+
+  .admin-grid-bg {
+    background-image:
+      linear-gradient(rgba(159, 176, 185, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(159, 176, 185, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .admin-pill {
+    border: 1px solid rgba(159, 176, 185, 0.18);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

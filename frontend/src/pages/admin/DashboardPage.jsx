@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, createElement } from 'react';
 import {
   BarChart,
   Bar,
@@ -14,17 +14,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import PriceDisplay from '../../components/common/PriceDisplay';
+import EmptyState from '../../components/common/EmptyState';
 
 function StatCard({ icon: Icon, label, value, iconColor }) {
   return (
     <Card>
-      <CardContent className="p-6 flex items-center gap-4">
-        <div className={`p-3 rounded-full bg-surface-container ${iconColor}`}>
-          <Icon className="w-6 h-6" />
+      <CardContent className="p-5 flex items-center gap-4 overflow-hidden">
+        <div className={`p-3 rounded-full bg-surface-container shrink-0 ${iconColor}`}>
+          {createElement(Icon, { className: 'w-6 h-6' })}
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm text-on-surface-variant font-body">{label}</p>
-          <p className="text-2xl font-bold font-headline text-on-surface">{value}</p>
+          <p className="text-xl font-bold font-headline text-on-surface truncate">{value}</p>
         </div>
       </CardContent>
     </Card>
@@ -44,17 +45,39 @@ const CustomTooltip = ({ active, payload, label }) => {
         <p className="text-sm text-primary font-body">
           Doanh thu: <PriceDisplay amount={payload[0].value} />
         </p>
+        {payload[0].payload.count != null && (
+          <p className="text-xs text-on-surface-variant font-body mt-1">
+            {payload[0].payload.count} đơn đặt phòng
+          </p>
+        )}
       </div>
     );
   }
   return null;
 };
 
+const PERIOD_OPTIONS = [
+  { key: '1m', label: '1 tháng', months: 1 },
+  { key: '3m', label: '3 tháng', months: 3 },
+  { key: '6m', label: '6 tháng', months: 6 },
+  { key: '12m', label: '12 tháng', months: 12 },
+];
+
+function getDateRange(months) {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: today.toISOString().slice(0, 10),
+  };
+}
+
 export default function DashboardPage() {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
 
+  const [revenuePeriod, setRevenuePeriod] = useState('6m');
   const [revenueData, setRevenueData] = useState([]);
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [revenueError, setRevenueError] = useState(null);
@@ -70,8 +93,19 @@ export default function DashboardPage() {
       .catch(() => setSummaryError('Không thể tải dữ liệu tổng quan.'))
       .finally(() => setSummaryLoading(false));
 
+    setBookingsLoading(true);
+    getAdminBookings(1)
+      .then((res) => setRecentBookings((res.data || []).slice(0, 5)))
+      .catch(() => setBookingsError('Không thể tải danh sách đặt phòng.'))
+      .finally(() => setBookingsLoading(false));
+  }, []);
+
+  const fetchRevenue = useCallback((periodKey) => {
+    const opt = PERIOD_OPTIONS.find((o) => o.key === periodKey);
+    if (!opt) return;
     setRevenueLoading(true);
-    getDashboardRevenue()
+    setRevenueError(null);
+    getDashboardRevenue(getDateRange(opt.months))
       .then((res) => {
         const formatted = (res.data || []).map((item) => ({
           ...item,
@@ -81,13 +115,18 @@ export default function DashboardPage() {
       })
       .catch(() => setRevenueError('Không thể tải dữ liệu doanh thu.'))
       .finally(() => setRevenueLoading(false));
-
-    setBookingsLoading(true);
-    getAdminBookings(1)
-      .then((res) => setRecentBookings((res.data || []).slice(0, 5)))
-      .catch(() => setBookingsError('Không thể tải danh sách đặt phòng.'))
-      .finally(() => setBookingsLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchRevenue(revenuePeriod);
+  }, [revenuePeriod, fetchRevenue]);
+
+  const handlePeriodChange = (key) => {
+    if (key === revenuePeriod) return;
+    setRevenuePeriod(key);
+  };
+
+  const currentPeriodLabel = PERIOD_OPTIONS.find((o) => o.key === revenuePeriod)?.label || '';
 
   return (
     <div className="space-y-8">
@@ -108,7 +147,7 @@ export default function DashboardPage() {
           <StatCard
             icon={TrendingUp}
             label="Tổng doanh thu"
-            value={<PriceDisplay amount={summary?.total_revenue ?? 0} />}
+            value={<PriceDisplay amount={summary?.total_revenue ?? 0} compact />}
             iconColor="text-primary"
           />
           <StatCard
@@ -135,17 +174,42 @@ export default function DashboardPage() {
       {/* Revenue Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-on-surface">Doanh thu 6 tháng gần nhất</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="font-headline text-on-surface">
+              Doanh thu {currentPeriodLabel} gần nhất
+            </CardTitle>
+            <div className="flex rounded-full border border-border bg-surface-container-low p-1">
+              {PERIOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => handlePeriodChange(opt.key)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    revenuePeriod === opt.key
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {revenueLoading ? (
-            <LoadingSpinner />
+            <div className="flex items-center justify-center min-h-[280px]">
+              <LoadingSpinner />
+            </div>
           ) : revenueError ? (
             <p className="text-sm text-error font-body">{revenueError}</p>
           ) : revenueData.length === 0 ? (
-            <p className="text-sm text-on-surface-variant text-center py-8 font-body">
-              Chưa có dữ liệu doanh thu.
-            </p>
+            <EmptyState
+              icon={TrendingUp}
+              title="Chưa có dữ liệu doanh thu"
+              description="Biểu đồ sẽ xuất hiện tại đây sau khi hệ thống ghi nhận các giao dịch hoàn tất."
+              className="min-h-[280px]"
+            />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={revenueData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
@@ -160,10 +224,21 @@ export default function DashboardPage() {
                   tick={{ fontSize: 11, fill: '#4e5e66' }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(v) => `${(v / 1000000).toFixed(0)}tr`}
+                  width={52}
+                  tickFormatter={(v) =>
+                    v >= 1_000_000_000
+                      ? `${(v / 1_000_000_000).toFixed(1)}tỷ`
+                      : `${(v / 1_000_000).toFixed(0)}tr`
+                  }
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="revenue" fill="#6e5900" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="revenue"
+                  fill="#6e5900"
+                  radius={[6, 6, 0, 0]}
+                  animationDuration={400}
+                  animationEasing="ease-out"
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -183,9 +258,14 @@ export default function DashboardPage() {
           ) : bookingsError ? (
             <p className="text-sm text-error p-6 font-body">{bookingsError}</p>
           ) : recentBookings.length === 0 ? (
-            <p className="text-sm text-on-surface-variant text-center py-8 font-body">
-              Chưa có đặt phòng nào.
-            </p>
+            <div className="p-6">
+              <EmptyState
+                icon={CalendarDays}
+                title="Chưa có đặt phòng gần đây"
+                description="Các đơn mới tạo sẽ được hiển thị ở đây để bạn theo dõi nhanh trạng thái và giá trị đơn."
+                className="min-h-[220px]"
+              />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -10,6 +10,10 @@ class BookingResource extends JsonResource
     public function toArray(Request $request): array
     {
         $homestay = $this->details->first()?->roomType?->homestay;
+        $review = $this->relationLoaded('review') ? $this->review : null;
+        $hasReview = $this->relationLoaded('review')
+            ? $review !== null
+            : $this->review()->exists();
 
         return [
             'id' => $this->id,
@@ -29,6 +33,13 @@ class BookingResource extends JsonResource
             'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
             'details' => BookingDetailResource::collection($this->whenLoaded('details')),
             'payments' => PaymentResource::collection($this->whenLoaded('payments')),
+            'has_review' => $hasReview,
+            'review' => $review ? [
+                'id' => $review->id,
+                'rating' => (int) $review->rating,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at?->toISOString(),
+            ] : null,
         ];
     }
 }

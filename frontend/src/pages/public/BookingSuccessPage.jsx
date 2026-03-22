@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle2, Calendar, BedDouble, Hash, Home } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
+import { Calendar, BedDouble, Hash, Home, Users, CreditCard, ShieldCheck, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import StatusBadge from '../../components/common/StatusBadge';
+import ImagePlaceholder from '../../components/common/ImagePlaceholder';
 
 export default function BookingSuccessPage() {
   const location = useLocation();
@@ -14,108 +14,120 @@ export default function BookingSuccessPage() {
 
   useEffect(() => {
     if (!state?.booking) {
-      navigate('/my-bookings', { replace: true });
+      navigate('/my-profile/bookings', { replace: true });
     }
   }, [state, navigate]);
 
   if (!state?.booking) return null;
 
-  const { booking, homestayName, roomTypeName } = state;
+  const { booking, homestayName, roomTypeName, roomImage, paymentMethod } = state;
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full">
-        {/* Success icon */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
-            <CheckCircle2 className="h-10 w-10 text-green-600" />
+    <div className="min-h-screen bg-background">
+      <div className="relative overflow-hidden bg-surface-container-low">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.22),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.16),_transparent_36%)]" />
+        <div className="relative max-w-5xl mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.92fr] gap-6 items-center">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-10 w-10 text-teal-500" strokeWidth={1.5} />
+                <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
+                  <Sparkles className="h-4 w-4" />
+                  Đặt phòng thành công
+                </div>
+              </div>
+              <h1 className="font-headline text-3xl sm:text-5xl font-extrabold text-on-surface leading-tight">
+                Cảm ơn bạn, đặt phòng của bạn đã được ghi nhận.
+              </h1>
+              <p className="max-w-2xl text-on-surface-variant text-sm sm:text-base leading-6">
+                Chúng tôi đã nhận được yêu cầu và đang xử lý xác nhận. Hãy kiểm tra lại chi tiết bên dưới để theo dõi trạng thái và phương thức thanh toán.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  to="/my-profile/bookings"
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-10 px-6 py-2 sunlight-gradient text-white hover:opacity-90"
+                >
+                  Xem lịch sử đặt phòng
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-10 px-6 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                >
+                  Về trang chủ
+                </Link>
+              </div>
+            </div>
+
+            <Card className="overflow-hidden border-border shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
+              <div className="h-44 overflow-hidden">
+                {roomImage ? (
+                  <img src={roomImage} alt={roomTypeName || homestayName} className="h-full w-full object-cover" />
+                ) : (
+                  <ImagePlaceholder name={roomTypeName || homestayName} className="h-full w-full" size="lg" />
+                )}
+              </div>
+              <CardContent className="pt-6 space-y-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-on-surface-variant">Mã đặt phòng</p>
+                    <p className="font-headline text-2xl font-extrabold text-on-surface">{booking.booking_code}</p>
+                  </div>
+                  <StatusBadge status={booking.status || 'pending'} />
+                </div>
+
+                <div className="rounded-[28px] border border-border bg-surface-container-low p-4 space-y-3">
+                  <InfoRow label="Homestay" value={homestayName || booking.homestay?.name} icon={Home} />
+                  <InfoRow label="Loại phòng" value={roomTypeName || booking.details?.[0]?.room_type?.name} icon={BedDouble} />
+                  <InfoRow label="Số khách" value={`${booking.guest_count || 0} khách`} icon={Users} />
+                  <InfoRow label="Thanh toán" value={formatPaymentMethod(paymentMethod)} icon={CreditCard} />
+                </div>
+
+                <div className="rounded-[28px] border border-border bg-white p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Thời gian lưu trú
+                  </div>
+                  <div className="text-sm text-on-surface-variant">
+                    <p>Nhận phòng: <span className="font-semibold text-on-surface">{formatDate(booking.check_in_date)}</span></p>
+                    <p>Trả phòng: <span className="font-semibold text-on-surface">{formatDate(booking.check_out_date)}</span></p>
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-dashed border-primary/25 bg-primary/5 p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-on-surface">Tổng tiền</span>
+                  </div>
+                  <span className="font-headline text-2xl font-bold text-primary">
+                    <PriceDisplay amount={booking.total_amount} />
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-[24px] border border-tertiary/20 bg-tertiary-container/30 p-4 text-sm">
+                  <ShieldCheck className="h-4 w-4 text-tertiary mt-0.5" />
+                  <p className="text-on-surface-variant leading-6">
+                    Vui lòng kiểm tra email và lịch đặt phòng của bạn. Nếu cần hỗ trợ, hãy liên hệ homestay hoặc quay lại danh sách đặt phòng.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <h1 className="font-headline text-2xl font-bold text-on-surface text-center">
-            Đặt phòng thành công!
-          </h1>
-          <p className="text-on-surface-variant text-sm text-center mt-1">
-            Yêu cầu đặt phòng của bạn đã được gửi. Chúng tôi sẽ xác nhận trong thời gian sớm nhất.
-          </p>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        {/* Booking detail card */}
-        <Card className="mb-6">
-          <CardContent className="pt-6 space-y-4">
-            {/* Booking code */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary-container">
-              <div className="flex items-center gap-2 text-on-primary-container">
-                <Hash className="h-4 w-4" />
-                <span className="text-sm font-medium">Mã đặt phòng</span>
-              </div>
-              <span className="font-headline font-bold text-lg text-on-primary-container tracking-wider">
-                {booking.booking_code}
-              </span>
-            </div>
-
-            {/* Status */}
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-on-surface-variant">Trạng thái</span>
-              <StatusBadge status={booking.status || 'pending'} />
-            </div>
-
-            {/* Homestay name */}
-            {homestayName && (
-              <div className="flex items-start gap-2 text-sm">
-                <Home className="h-4 w-4 text-on-surface-variant mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-on-surface-variant">Homestay</p>
-                  <p className="font-medium text-on-surface">{homestayName}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Room type */}
-            {roomTypeName && (
-              <div className="flex items-start gap-2 text-sm">
-                <BedDouble className="h-4 w-4 text-on-surface-variant mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-on-surface-variant">Loại phòng</p>
-                  <p className="font-medium text-on-surface">{roomTypeName}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Dates */}
-            <div className="flex items-start gap-2 text-sm">
-              <Calendar className="h-4 w-4 text-on-surface-variant mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-on-surface-variant">Thời gian lưu trú</p>
-                <p className="font-medium text-on-surface">
-                  {formatDate(booking.check_in_date)}
-                  {' '}&rarr;{' '}
-                  {formatDate(booking.check_out_date)}
-                </p>
-              </div>
-            </div>
-
-            {/* Total amount */}
-            <div className="flex items-center justify-between pt-3 border-t border-border">
-              <span className="font-semibold text-on-surface">Tổng tiền</span>
-              <span className="font-headline font-bold text-xl text-primary">
-                <PriceDisplay amount={booking.total_amount} />
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Action buttons */}
-        <div className="flex flex-col gap-3">
-          <Link to="/my-bookings">
-            <Button className="w-full" size="lg">
-              Xem đặt phòng của tôi
-            </Button>
-          </Link>
-          <Link to="/">
-            <Button variant="outline" className="w-full" size="lg">
-              Về trang chủ
-            </Button>
-          </Link>
-        </div>
+function InfoRow({ label, value, icon: Icon }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white border border-border">
+        <Icon className="h-4 w-4 text-on-surface-variant" />
+      </span>
+      <div className="flex-1">
+        <p className="text-xs text-on-surface-variant">{label}</p>
+        <p className="font-semibold text-on-surface">{value}</p>
       </div>
     </div>
   );
@@ -124,5 +136,15 @@ export default function BookingSuccessPage() {
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatPaymentMethod(method) {
+  if (!method) return 'Chưa chọn';
+  const map = {
+    transfer: 'Chuyển khoản',
+    cash: 'Tiền mặt',
+    card: 'Thẻ thanh toán',
+  };
+  return map[method] || method;
 }

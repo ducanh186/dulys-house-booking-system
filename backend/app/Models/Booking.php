@@ -54,6 +54,11 @@ class Booking extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function review(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Review::class);
+    }
+
     public function scopeOverlapping(Builder $query, Carbon $checkIn, Carbon $checkOut): Builder
     {
         return $query

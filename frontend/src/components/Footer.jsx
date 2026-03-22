@@ -1,83 +1,84 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
+import { Send } from 'lucide-react';
+
+const aboutLinks = [
+  { label: 'Giới thiệu', to: '/about' },
+  { label: 'Tuyển dụng', to: '/careers' },
+  { label: 'Bản tin', to: '/news' },
+];
+
+const supportLinks = [
+  { label: 'Liên hệ hỗ trợ', to: '/support/contact' },
+  { label: 'Chính sách bảo mật', to: '/privacy-policy' },
+  { label: 'Điều khoản dịch vụ', to: '/terms-of-service' },
+];
 
 export function Footer() {
   return (
-    <footer className="w-full mt-20 bg-[#f8fafc]">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 px-8 py-12 max-w-7xl mx-auto">
-        <div className="col-span-2 md:col-span-1 space-y-4">
-          <span className="text-lg font-bold text-on-surface font-headline">Duly's House</span>
-          <p className="text-on-surface-variant font-body text-xs leading-relaxed">
+    <footer className="w-full mt-20 border-t border-border bg-[linear-gradient(180deg,_#f8fafc_0%,_#eef4fb_100%)]">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-2 xl:grid-cols-[1.1fr_0.8fr_0.8fr_1.1fr]">
+        <div className="space-y-4">
+          <p className="text-lg font-bold text-on-surface font-headline">Duly's House</p>
+          <p className="max-w-sm text-sm leading-6 text-on-surface-variant">
             Nâng tầm trải nghiệm lưu trú với dịch vụ chuyên nghiệp và tận tâm.
           </p>
         </div>
+
         <div className="space-y-4">
-          <h5 className="font-headline text-on-surface font-bold text-sm">Về chúng tôi</h5>
+          <h5 className="text-sm font-bold text-on-surface font-headline">Về chúng tôi</h5>
           <ul className="space-y-2">
-            <li>
-              <a className="text-on-surface-variant font-body text-xs hover:underline transition-all hover:translate-x-1 inline-block" href="#">
-                Giới thiệu
-              </a>
-            </li>
-            <li>
-              <a className="text-on-surface-variant font-body text-xs hover:underline transition-all hover:translate-x-1 inline-block" href="#">
-                Tuyển dụng
-              </a>
-            </li>
-            <li>
-              <a className="text-on-surface-variant font-body text-xs hover:underline transition-all hover:translate-x-1 inline-block" href="#">
-                Bản tin
-              </a>
-            </li>
+            {aboutLinks.map((item) => (
+              <li key={item.to}>
+                <Link className="inline-block text-sm text-on-surface-variant transition-colors hover:text-primary" to={item.to}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
+
         <div className="space-y-4">
-          <h5 className="font-headline text-on-surface font-bold text-sm">Hỗ trợ</h5>
+          <h5 className="text-sm font-bold text-on-surface font-headline">Hỗ trợ</h5>
           <ul className="space-y-2">
-            <li>
-              <a className="text-on-surface-variant font-body text-xs hover:underline transition-all hover:translate-x-1 inline-block" href="#">
-                Liên hệ hỗ trợ
-              </a>
-            </li>
-            <li>
-              <a className="text-on-surface-variant font-body text-xs hover:underline transition-all hover:translate-x-1 inline-block" href="#">
-                Chính sách bảo mật
-              </a>
-            </li>
-            <li>
-              <a className="text-on-surface-variant font-body text-xs hover:underline transition-all hover:translate-x-1 inline-block" href="#">
-                Điều khoản dịch vụ
-              </a>
-            </li>
+            {supportLinks.map((item) => (
+              <li key={item.to}>
+                <Link className="inline-block text-sm text-on-surface-variant transition-colors hover:text-primary" to={item.to}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
+
         <div className="space-y-4">
-          <h5 className="font-headline text-on-surface font-bold text-sm">Bản tin</h5>
-          <p className="text-on-surface-variant font-body text-xs">Đăng ký nhận thông tin ưu đãi và gợi ý lưu trú hấp dẫn.</p>
-          <div className="flex">
+          <h5 className="text-sm font-bold text-on-surface font-headline">Bản tin</h5>
+          <p className="text-sm leading-6 text-on-surface-variant">
+            Đăng ký nhận thông tin ưu đãi và gợi ý lưu trú hấp dẫn.
+          </p>
+          <form
+            className="flex overflow-hidden rounded-full border border-border bg-white shadow-sm"
+            onSubmit={(event) => event.preventDefault()}
+          >
             <input
-              className="bg-white border-none rounded-l-full text-xs px-4 py-2 w-full focus:ring-1 focus:ring-primary outline-none font-body"
+              className="w-full border-0 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-on-surface-variant"
               placeholder="Địa chỉ email"
               type="email"
             />
-            <button className="text-white rounded-r-full px-4 sunlight-gradient">
-              <span className="material-symbols-outlined text-sm">send</span>
+            <button
+              className="inline-flex items-center justify-center px-4 text-white sunlight-gradient transition-opacity hover:opacity-90"
+              type="submit"
+              aria-label="Gửi email"
+            >
+              <Send className="h-4 w-4" />
             </button>
-          </div>
+          </form>
         </div>
       </div>
-      <div className="px-8 py-6 max-w-7xl mx-auto border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-on-surface-variant font-body text-xs">&copy; 2026 Duly's House. Bản quyền thuộc về Duly's House.</p>
-        <div className="flex gap-6">
-          <a className="text-on-surface-variant hover:text-primary transition-colors" href="#">
-            <span className="material-symbols-outlined text-lg">public</span>
-          </a>
-          <a className="text-on-surface-variant hover:text-primary transition-colors" href="#">
-            <span className="material-symbols-outlined text-lg">share</span>
-          </a>
-          <a className="text-on-surface-variant hover:text-primary transition-colors" href="#">
-            <span className="material-symbols-outlined text-lg">favorite</span>
-          </a>
-        </div>
+
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-border px-4 py-6 md:flex-row md:items-center md:justify-between">
+        <p className="text-sm text-on-surface-variant">
+          © 2026 Duly's House. Bản quyền thuộc về Duly's House.
+        </p>
       </div>
     </footer>
   );

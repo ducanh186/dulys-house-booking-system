@@ -15,7 +15,9 @@ class DatabaseSeeder extends Seeder
             HomestaySeeder::class,
             RoomTypeSeeder::class,
             RoomSeeder::class,
+            HistoricalBookingSeeder::class,
             BookingSeeder::class,
+            ReviewSeeder::class,
         ]);
     }
 }

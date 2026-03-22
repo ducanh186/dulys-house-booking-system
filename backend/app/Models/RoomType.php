@@ -40,4 +40,14 @@ class RoomType extends Model
     {
         return $this->hasMany(BookingDetail::class);
     }
+
+    public function blockedDates(): HasMany
+    {
+        return $this->hasMany(BlockedDate::class);
+    }
+
+    public function priceOverrides(): HasMany
+    {
+        return $this->hasMany(PriceOverride::class);
+    }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Search, Users, Calendar, MapPin, BedDouble, AlertCircle } from 'lucide-react';
+import { Search, Users, Calendar, MapPin, BedDouble, AlertCircle, Star } from 'lucide-react';
 import { searchAvailability, getHomestays } from '../../api/homestays';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
+import ImagePlaceholder from '../../components/common/ImagePlaceholder';
 import { cn } from '../../lib/utils';
 
 export default function SearchResultPage() {
@@ -224,13 +225,11 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) 
     <div className="rounded-[32px] border border-border bg-white shadow-sm overflow-hidden">
       {/* Homestay header */}
       <div className="flex items-start gap-4 p-5 border-b border-border bg-surface-container-low">
-        <div className="h-16 w-16 rounded-lg bg-surface-container-highest shrink-0 overflow-hidden">
+        <div className="h-16 w-16 rounded-lg shrink-0 overflow-hidden">
           {homestay.thumbnail ? (
             <img src={homestay.thumbnail} alt={homestay.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="h-full w-full flex items-center justify-center">
-              <BedDouble className="h-7 w-7 text-on-surface-variant" />
-            </div>
+            <ImagePlaceholder name={homestay.name} className="h-full w-full rounded-lg" size="sm" />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -242,9 +241,9 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) 
         </div>
         <Link
           to={`/homestays/${homestay.slug}?check_in=${checkIn}&check_out=${checkOut}`}
-          className="shrink-0"
+          className="shrink-0 inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
         >
-          <Button variant="outline" size="sm">Xem chi tiết</Button>
+          Xem chi tiết
         </Link>
       </div>
 
@@ -277,8 +276,11 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) 
                   <PriceDisplay amount={rt.total_price} />
                 </p>
               </div>
-              <Link to={`/homestays/${homestay.slug}?check_in=${checkIn}&check_out=${checkOut}`}>
-                <Button size="sm">Xem chi tiết</Button>
+              <Link
+                to={`/homestays/${homestay.slug}/rooms/${rt.id}?check_in=${checkIn}&check_out=${checkOut}`}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-9 px-4 sunlight-gradient text-white hover:opacity-90"
+              >
+                Xem phòng
               </Link>
             </div>
           </div>
@@ -291,33 +293,52 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) 
 function HomestayCard({ homestay }) {
   return (
     <Link to={`/homestays/${homestay.slug}`}>
-      <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
-        <div className="h-44 bg-surface-container-highest rounded-t-[32px] overflow-hidden">
+      <Card className="h-full hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group overflow-hidden">
+        <div className="h-48 rounded-t-[32px] overflow-hidden relative">
           {homestay.thumbnail ? (
-            <img src={homestay.thumbnail} alt={homestay.name} className="h-full w-full object-cover" />
+            <img src={homestay.thumbnail} alt={homestay.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" />
           ) : (
-            <div className="h-full w-full flex items-center justify-center">
-              <BedDouble className="h-10 w-10 text-on-surface-variant" />
+            <ImagePlaceholder name={homestay.name} className="h-full w-full" size="lg" />
+          )}
+          {/* Status overlay */}
+          <div className="absolute top-3 left-3">
+            <Badge
+              className={cn(
+                'shadow-sm backdrop-blur-sm',
+                homestay.is_active
+                  ? 'bg-green-500/90 text-white border-0'
+                  : 'bg-gray-500/90 text-white border-0'
+              )}
+            >
+              {homestay.is_active ? 'Đang hoạt động' : 'Tạm đóng'}
+            </Badge>
+          </div>
+          {/* Star rating badge */}
+          {homestay.average_rating > 0 && (
+            <div className="absolute top-3 right-3">
+              <div className="flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-sm px-2.5 py-1 text-white text-xs font-semibold">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                {Number(homestay.average_rating).toFixed(1)}
+              </div>
             </div>
           )}
+          {/* Gradient overlay at bottom */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent" />
         </div>
         <CardHeader className="pb-2">
-          <CardTitle className="font-headline text-base">{homestay.name}</CardTitle>
+          <CardTitle className="font-headline text-base group-hover:text-primary transition-colors">{homestay.name}</CardTitle>
           <CardDescription className="flex items-center gap-1 text-xs">
             <MapPin className="h-3 w-3 shrink-0" />
             {homestay.address}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Badge
-            className={cn(
-              homestay.is_active
-                ? 'bg-green-100 text-green-800 border-green-200'
-                : 'bg-gray-100 text-gray-700 border-gray-200'
-            )}
-          >
-            {homestay.is_active ? 'Đang hoạt động' : 'Tạm đóng'}
-          </Badge>
+        <CardContent className="pt-0">
+          {homestay.room_types_count != null && (
+            <p className="text-xs text-on-surface-variant flex items-center gap-1">
+              <BedDouble className="h-3 w-3" />
+              {homestay.room_types_count} loại phòng
+            </p>
+          )}
         </CardContent>
       </Card>
     </Link>

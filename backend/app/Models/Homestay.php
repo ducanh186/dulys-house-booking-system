@@ -66,4 +66,20 @@ class Homestay extends Model
     {
         return $this->hasManyThrough(Room::class, RoomType::class);
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function getAverageRatingAttribute(): ?float
+    {
+        $avg = $this->reviews()->avg('rating');
+        return $avg ? round($avg, 1) : null;
+    }
+
+    public function getReviewsCountAttribute(): int
+    {
+        return $this->reviews()->count();
+    }
 }

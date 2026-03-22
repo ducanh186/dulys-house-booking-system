@@ -21,6 +21,9 @@ class HomestayResource extends JsonResource
             'is_active' => (bool) $this->is_active,
             'room_types_count' => $this->whenCounted('roomTypes'),
             'rooms_count' => $this->whenCounted('rooms'),
+            'average_rating' => $this->reviews_avg_rating ? round((float) $this->reviews_avg_rating, 1) : null,
+            'reviews_count' => $this->reviews_count ?? 0,
+            'min_price' => $this->room_types_min_nightly_rate ? (float) $this->room_types_min_nightly_rate : null,
             'room_types' => RoomTypeResource::collection($this->whenLoaded('roomTypes')),
         ];
     }

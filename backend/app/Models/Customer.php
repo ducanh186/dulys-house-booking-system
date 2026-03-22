@@ -28,6 +28,11 @@ class Customer extends Model
         return $this->hasMany(Booking::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
     public function getNameAttribute(): string
     {
         return $this->full_name;

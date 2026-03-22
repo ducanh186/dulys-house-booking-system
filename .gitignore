@@ -61,6 +61,18 @@ frontend/.env
 frontend/.env.local
 frontend/.env.*.local
 
+# Claude Code local settings
+.claude/
+
+# Stitch (local design tool)
+frontend/.stitch/
+
+# Scratch / temp notes
+fix.md
+test.md
+ses.txt
+tests/
+
 # Misc
 *.log
 npm-debug.log*

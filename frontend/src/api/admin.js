@@ -4,8 +4,8 @@ import client from './client';
 export const getDashboardSummary = () =>
   client.get('/admin/dashboard/summary');
 
-export const getDashboardRevenue = () =>
-  client.get('/admin/dashboard/revenue');
+export const getDashboardRevenue = (params) =>
+  client.get('/admin/dashboard/revenue', { params });
 
 // Homestays CRUD
 export const getAdminHomestays = (page = 1) =>
@@ -90,3 +90,36 @@ export const getCustomers = (page = 1) =>
 
 export const getCustomer = (id) =>
   client.get(`/admin/customers/${id}`);
+
+// Availability Calendar
+export const getRoomTypeCalendar = (roomTypeId, month) =>
+  client.get(`/admin/room-types/${roomTypeId}/calendar`, { params: { month } });
+
+export const blockDates = (roomTypeId, data) =>
+  client.post(`/admin/room-types/${roomTypeId}/block-dates`, data);
+
+export const unblockDates = (id) =>
+  client.delete(`/admin/blocked-dates/${id}`);
+
+// Pricing Management
+export const getRoomTypePricing = (roomTypeId, month) =>
+  client.get(`/admin/room-types/${roomTypeId}/pricing`, { params: { month } });
+
+export const createPriceOverride = (roomTypeId, data) =>
+  client.post(`/admin/room-types/${roomTypeId}/price-overrides`, data);
+
+export const deletePriceOverride = (id) =>
+  client.delete(`/admin/price-overrides/${id}`);
+
+// Reports
+export const getOccupancyReport = (params) =>
+  client.get('/admin/reports/occupancy', { params });
+
+export const getCancellationReport = (params) =>
+  client.get('/admin/reports/cancellations', { params });
+
+export const getRevenueByHomestay = (params) =>
+  client.get('/admin/reports/revenue-by-homestay', { params });
+
+export const getCustomerReports = (params) =>
+  client.get('/admin/reports/customers', { params });

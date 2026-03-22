@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BlockedDate;
 use App\Models\BookingDetail;
 use App\Models\Room;
 use App\Models\RoomType;
@@ -35,13 +36,29 @@ class AvailabilityService
         $roomTypes = $query->get();
 
         return $roomTypes->map(function (RoomType $roomType) use ($checkIn, $checkOut) {
+            // Skip if fully blocked
+            if ($this->isRoomTypeBlocked($roomType->id, $checkIn, $checkOut)) {
+                return null;
+            }
+
             $availableCount = $this->getAvailableRoomCount($roomType->id, $checkIn, $checkOut);
 
             return [
                 'room_type' => $roomType,
                 'available_count' => $availableCount,
             ];
-        })->filter(fn ($item) => $item['available_count'] > 0)->values();
+        })->filter(fn ($item) => $item !== null && $item['available_count'] > 0)->values();
+    }
+
+    /**
+     * Check if a room type is fully blocked for a date range.
+     */
+    public function isRoomTypeBlocked(string $roomTypeId, Carbon $checkIn, Carbon $checkOut): bool
+    {
+        return BlockedDate::where('room_type_id', $roomTypeId)
+            ->whereDate('date_from', '<=', $checkIn->toDateString())
+            ->whereDate('date_to', '>=', $checkOut->copy()->subDay()->toDateString())
+            ->exists();
     }
 
     /**
@@ -49,13 +66,14 @@ class AvailabilityService
      */
     public function isRoomTypeAvailable(string $roomTypeId, Carbon $checkIn, Carbon $checkOut): bool
     {
+        if ($this->isRoomTypeBlocked($roomTypeId, $checkIn, $checkOut)) {
+            return false;
+        }
         return $this->getAvailableRoomCount($roomTypeId, $checkIn, $checkOut) > 0;
     }
 
     /**
      * Count available rooms of a type in the date range.
-     * A room is unavailable if it has a non-cancelled booking overlapping the range,
-     * or if it's in maintenance status.
      */
     public function getAvailableRoomCount(string $roomTypeId, Carbon $checkIn, Carbon $checkOut): int
     {
@@ -73,6 +91,66 @@ class AvailabilityService
             ->sum('quantity');
 
         return max(0, $totalRooms - (int) $reservedQuantity);
+    }
+
+    /**
+     * Get daily availability for a room type in a given month.
+     */
+    public function getMonthlyCalendar(string $roomTypeId, Carbon $month): array
+    {
+        $roomType = RoomType::findOrFail($roomTypeId);
+        $start = $month->copy()->startOfMonth();
+        $end = $month->copy()->endOfMonth();
+
+        $totalRooms = Room::where('room_type_id', $roomTypeId)
+            ->where('status', '!=', 'maintenance')
+            ->count();
+
+        $blockedDates = BlockedDate::where('room_type_id', $roomTypeId)
+            ->whereDate('date_from', '<=', $end->toDateString())
+            ->whereDate('date_to', '>=', $start->toDateString())
+            ->get();
+
+        $calendar = [];
+        $current = $start->copy();
+
+        while ($current->lte($end)) {
+            $date = $current->toDateString();
+            $nextDay = $current->copy()->addDay();
+
+            $booked = BookingDetail::where('room_type_id', $roomTypeId)
+                ->whereHas('booking', fn ($q) => $q
+                    ->inventoryHeld()
+                    ->overlapping($current, $nextDay))
+                ->sum('quantity');
+
+            $isBlocked = $blockedDates->contains(fn ($b) =>
+                $date >= $b->date_from->toDateString() && $date <= $b->date_to->toDateString()
+            );
+
+            $blockReason = null;
+            if ($isBlocked) {
+                $block = $blockedDates->first(fn ($b) =>
+                    $date >= $b->date_from->toDateString() && $date <= $b->date_to->toDateString()
+                );
+                $blockReason = $block?->reason;
+            }
+
+            $available = $isBlocked ? 0 : max(0, $totalRooms - (int) $booked);
+
+            $calendar[] = [
+                'date' => $date,
+                'total_rooms' => $totalRooms,
+                'booked_count' => (int) $booked,
+                'available_count' => $available,
+                'is_blocked' => $isBlocked,
+                'block_reason' => $blockReason,
+            ];
+
+            $current->addDay();
+        }
+
+        return $calendar;
     }
 
     /**
