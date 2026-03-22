@@ -15,14 +15,19 @@ class RoomSeeder extends Seeder
         // Nhóm theo homestay để đánh mã phòng logic theo tầng
         $homestayGroups = $roomTypes->groupBy(fn ($rt) => $rt->homestay_id);
 
+        // Short prefix per homestay to ensure globally unique room codes
+        $prefixMap = [];
+        $prefixIdx = 0;
+        $prefixes = ['DN', 'HA', 'DL', 'PQ', 'SP', 'HN', 'NT', 'QN'];
+
         foreach ($homestayGroups as $homestayId => $types) {
+            $prefix = $prefixes[$prefixIdx] ?? ('H' . ($prefixIdx + 1));
+            $prefixIdx++;
             $floor = 1;
 
             foreach ($types as $roomType) {
-                // Số phòng tùy loại: Standard nhiều nhất, VIP/Suite ít nhất
                 $count = $this->roomCountFor($roomType->name);
 
-                // Trạng thái đa dạng để test
                 $statuses = ['available', 'available', 'available', 'occupied', 'maintenance'];
                 $cleanStates = ['clean', 'clean', 'clean', 'dirty', 'cleaning'];
 
@@ -31,7 +36,7 @@ class RoomSeeder extends Seeder
 
                     Room::create([
                         'room_type_id' => $roomType->id,
-                        'room_code' => 'P' . $floor . str_pad($i, 2, '0', STR_PAD_LEFT),
+                        'room_code' => $prefix . '-' . $floor . str_pad($i, 2, '0', STR_PAD_LEFT),
                         'status' => $statuses[$statusIdx],
                         'cleanliness' => $cleanStates[$statusIdx],
                         'notes' => $this->randomNote($statusIdx),
