@@ -177,7 +177,7 @@ class AvailabilityService
         $assignedRoomIds = $this->getAssignedRoomIds($roomTypeId, $checkIn, $checkOut);
 
         return Room::where('room_type_id', $roomTypeId)
-            ->where('status', 'available')
+            ->where('status', '!=', 'maintenance')
             ->whereNotIn('id', $assignedRoomIds)
             ->orderBy('room_code')
             ->limit($quantity)

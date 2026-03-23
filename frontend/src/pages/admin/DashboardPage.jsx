@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, createElement } from 'react';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -211,9 +211,15 @@ export default function DashboardPage() {
               className="min-h-[280px]"
             />
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={revenueData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#d6ebf7" />
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={revenueData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6e5900" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#6e5900" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#d6ebf7" vertical={false} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 12, fill: '#4e5e66' }}
@@ -232,14 +238,18 @@ export default function DashboardPage() {
                   }
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="revenue"
-                  fill="#6e5900"
-                  radius={[6, 6, 0, 0]}
+                  stroke="#6e5900"
+                  strokeWidth={2.5}
+                  fill="url(#revenueGradient)"
+                  dot={{ r: 4, fill: '#6e5900', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, fill: '#6e5900', strokeWidth: 2, stroke: '#fff' }}
                   animationDuration={400}
                   animationEasing="ease-out"
                 />
-              </BarChart>
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </CardContent>

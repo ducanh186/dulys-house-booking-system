@@ -40,16 +40,30 @@ class DashboardService
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->get();
 
-        return $bookings
+        $grouped = $bookings
             ->groupBy(fn (Booking $booking) => $booking->created_at->format('Y-m'))
             ->map(fn ($group, $month) => [
                 'month' => $month,
                 'revenue' => (float) $group->sum('total_amount'),
                 'count' => $group->count(),
-            ])
-            ->sortBy('month')
-            ->values()
-            ->all();
+            ]);
+
+        // Fill all months in the range so the chart always shows every month
+        $result = [];
+        $cursor = $from->copy()->startOfMonth();
+        $end = $to->copy()->startOfMonth();
+
+        while ($cursor->lte($end)) {
+            $key = $cursor->format('Y-m');
+            $result[] = $grouped->get($key, [
+                'month' => $key,
+                'revenue' => 0,
+                'count' => 0,
+            ]);
+            $cursor->addMonth();
+        }
+
+        return $result;
     }
 
     public function getOccupancyReport(?string $homestayId, Carbon $from, Carbon $to): array

@@ -20,82 +20,10 @@ Hoặc chỉ cần **Docker Desktop** nếu chạy bằng Docker.
 
 ---
 
-## Cách 1: Chạy local (không Docker)
 
-### Bước 1 — Tạo database MySQL
+## Chạy bằng Docker
 
-```sql
-CREATE DATABASE dulys_house CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-Hoặc dùng command line:
-```bash
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS dulys_house CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
-
-### Bước 2 — Setup Backend
-
-```bash
-cd backend
-
-# Cài dependencies
-composer install
-
-# Tạo file .env từ template
-cp .env.example .env
-
-# Generate app key
-php artisan key:generate
-```
-
-Mở file `backend/.env` và chỉnh DB nếu cần:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=dulys_house
-DB_USERNAME=root
-DB_PASSWORD=          # điền password MySQL của bạn nếu có
-```
-
-Chạy migration và seed data mẫu:
-```bash
-php artisan migrate --seed
-```
-
-Khởi động server:
-```bash
-php artisan serve
-# => http://localhost:8000
-```
-
-### Bước 3 — Setup Frontend
-
-Mở terminal mới:
-```bash
-cd frontend
-
-# Cài dependencies
-npm install
-
-# Khởi động dev server
-npm run dev
-# => http://localhost:5173
-```
-
-Frontend tự proxy `/api` sang `localhost:8000`, không cần cấu hình CORS.
-
-### Bước 4 — Truy cập
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000/api
-- **Admin panel**: http://localhost:5173/admin
-
----
-
-## Cách 2: Chạy bằng Docker
-
-### Windows (1 lệnh, đơn giản cho non-tech)
+### Windows (1 lệnh, đơn giản)
 
 Chạy từ thư mục gốc project:
 

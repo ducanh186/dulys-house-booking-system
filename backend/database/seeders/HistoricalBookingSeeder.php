@@ -22,17 +22,23 @@ class HistoricalBookingSeeder extends Seeder
             return;
         }
 
-        // Tạo booking lịch sử cho tháng 1-4/2026
-        // Mỗi tháng tăng dần doanh thu (mô phỏng tăng trưởng)
+        // Tạo booking lịch sử cho 12 tháng gần nhất (04/2025 → 03/2026)
+        // Mô phỏng tăng trưởng doanh thu theo mùa
         $monthConfigs = [
-            // Tháng 1: mùa thấp điểm sau Tết
+            // 2025 — mùa thấp điểm + tăng dần
+            ['year' => 2025, 'month' => 4, 'count' => 5, 'status_weights' => ['checked_out' => 4, 'cancelled' => 1]],
+            ['year' => 2025, 'month' => 5, 'count' => 7, 'status_weights' => ['checked_out' => 6, 'cancelled' => 1]],
+            ['year' => 2025, 'month' => 6, 'count' => 10, 'status_weights' => ['checked_out' => 8, 'cancelled' => 2]],
+            ['year' => 2025, 'month' => 7, 'count' => 13, 'status_weights' => ['checked_out' => 11, 'cancelled' => 2]],
+            ['year' => 2025, 'month' => 8, 'count' => 12, 'status_weights' => ['checked_out' => 10, 'cancelled' => 2]],
+            ['year' => 2025, 'month' => 9, 'count' => 9, 'status_weights' => ['checked_out' => 7, 'cancelled' => 2]],
+            ['year' => 2025, 'month' => 10, 'count' => 8, 'status_weights' => ['checked_out' => 6, 'cancelled' => 2]],
+            ['year' => 2025, 'month' => 11, 'count' => 6, 'status_weights' => ['checked_out' => 5, 'cancelled' => 1]],
+            ['year' => 2025, 'month' => 12, 'count' => 11, 'status_weights' => ['checked_out' => 9, 'cancelled' => 2]],
+            // 2026 — cao điểm đầu năm
             ['year' => 2026, 'month' => 1, 'count' => 8, 'status_weights' => ['checked_out' => 6, 'cancelled' => 2]],
-            // Tháng 2: Tết + Valentine, cao điểm
             ['year' => 2026, 'month' => 2, 'count' => 14, 'status_weights' => ['checked_out' => 12, 'cancelled' => 2]],
-            // Tháng 3: ổn định
             ['year' => 2026, 'month' => 3, 'count' => 11, 'status_weights' => ['checked_out' => 9, 'cancelled' => 2]],
-            // Tháng 4: bắt đầu mùa hè, tăng nhu cầu (hiện tại — mix trạng thái)
-            ['year' => 2026, 'month' => 4, 'count' => 6, 'status_weights' => ['checked_out' => 2, 'confirmed' => 2, 'pending' => 1, 'cancelled' => 1]],
         ];
 
         foreach ($monthConfigs as $config) {
@@ -163,7 +169,7 @@ class HistoricalBookingSeeder extends Seeder
             ],
         ];
 
-        $monthNames = [1 => 'tháng 1', 2 => 'tháng 2', 3 => 'tháng 3', 4 => 'tháng 4'];
+        $monthNames = [1 => 'tháng 1', 2 => 'tháng 2', 3 => 'tháng 3', 4 => 'tháng 4', 5 => 'tháng 5', 6 => 'tháng 6', 7 => 'tháng 7', 8 => 'tháng 8', 9 => 'tháng 9', 10 => 'tháng 10', 11 => 'tháng 11', 12 => 'tháng 12'];
         $pool = $notes[$status] ?? $notes['checked_out'];
         return $pool[array_rand($pool)] . ' — ' . ($monthNames[$month] ?? '');
     }

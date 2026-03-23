@@ -236,8 +236,8 @@ export default function BookingManagementPage() {
     try {
       await actionFn(bookingId);
       await fetchBookings();
-    } catch {
-      setError('Có lỗi xảy ra, vui lòng thử lại.');
+    } catch (err) {
+      setError(err?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setActionLoading('');
     }
@@ -260,9 +260,6 @@ export default function BookingManagementPage() {
             <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl">
               Quản lý đặt phòng
             </h1>
-            <p className="max-w-2xl text-sm leading-6 text-on-surface-variant sm:text-base">
-              Xử lý xác nhận, nhận phòng và trả phòng trong một giao diện dạng thẻ, rõ trạng thái và phù hợp cả desktop lẫn mobile.
-            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <SummaryCard icon={Clock3} label="Chờ xác nhận" value={summary.pending} hint="Đơn cần duyệt" />
@@ -283,9 +280,6 @@ export default function BookingManagementPage() {
             <CardTitle className="font-headline text-lg font-extrabold text-on-surface">
               Danh sách đặt phòng
             </CardTitle>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Các thao tác chính được giữ nguyên, chỉ thay đổi cách trình bày.
-            </p>
           </div>
           <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">{summary.total} đơn</Badge>
         </CardHeader>

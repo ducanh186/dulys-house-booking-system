@@ -25,7 +25,7 @@ const navGroups = [
   {
     label: 'Tổng quan',
     items: [
-      { to: '/admin', label: 'Dashboard', description: 'Tình trạng hệ thống', icon: LayoutDashboard },
+      { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     ],
   },
   {
@@ -160,9 +160,11 @@ export default function AdminLayout() {
                       </span>
                       <span className={`min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-150 ${collapsed ? 'lg:opacity-0 lg:w-0 lg:flex-none' : 'opacity-100'}`}>
                         <span className="block text-sm font-semibold tracking-tight">{item.label}</span>
-                        <span className="block text-[11px] font-medium text-on-surface-variant">
-                          {item.description}
-                        </span>
+                        {item.description && (
+                          <span className="block text-[11px] font-medium text-on-surface-variant">
+                            {item.description}
+                          </span>
+                        )}
                       </span>
                       {active && (
                         <ChevronRight className={`h-4 w-4 shrink-0 text-primary-dim transition-opacity duration-150 ${collapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100'}`} />
@@ -176,19 +178,6 @@ export default function AdminLayout() {
         </nav>
 
         <div className="border-t border-border/70 p-3 space-y-1">
-          <Link
-            to="/"
-            title={collapsed ? 'Về giao diện khách' : undefined}
-            className={`admin-pill flex items-center rounded-2xl py-2.5 text-sm font-semibold text-on-surface-variant transition hover:text-on-surface ${collapsed ? 'lg:justify-center lg:px-0 px-3' : 'justify-between px-3'}`}
-          >
-            <span className="inline-flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4 shrink-0" />
-              <span className={`overflow-hidden whitespace-nowrap transition-opacity duration-150 ${collapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100'}`}>
-                Về giao diện khách
-              </span>
-            </span>
-            <ChevronRight className={`h-4 w-4 transition-opacity duration-150 ${collapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100'}`} />
-          </Link>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -220,9 +209,11 @@ export default function AdminLayout() {
                 <h2 className="truncate font-headline text-lg font-extrabold tracking-tight text-on-surface sm:text-2xl">
                   {activeItem?.label || 'Dashboard'}
                 </h2>
-                <p className="truncate text-sm text-on-surface-variant">
-                  {activeItem?.description || 'Điều phối vận hành hệ thống'}
-                </p>
+                {activeItem?.description && (
+                  <p className="truncate text-sm text-on-surface-variant">
+                    {activeItem.description}
+                  </p>
+                )}
               </div>
             </div>
 

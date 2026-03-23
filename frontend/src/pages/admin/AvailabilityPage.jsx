@@ -258,9 +258,6 @@ export default function AvailabilityPage() {
             <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl">
               Quản lý lịch phòng
             </h1>
-            <p className="max-w-2xl text-sm leading-6 text-on-surface-variant sm:text-base">
-              Chọn cơ sở, duyệt theo tháng và xử lý chặn ngày hoặc điều chỉnh giá ngay trong một màn hình.
-            </p>
           </div>
 
           <Card className="admin-card self-start">
