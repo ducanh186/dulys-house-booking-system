@@ -1,249 +1,346 @@
 # Duly's House Booking System
 
-Hệ thống quản lý đặt phòng Homestay.
+Hệ thống quản lý đặt phòng Homestay — giao diện tiếng Việt, quản trị đa vai trò.
 
-**Stack**: Laravel 13 + React 19 + MySQL + Tailwind CSS 4
-
----
-
-## Yêu cầu hệ thống
-
-| Tool | Version |
-|------|---------|
-| PHP | >= 8.3 |
-| Composer | >= 2.x |
-| Node.js | >= 20.x |
-| MySQL | >= 8.0 |
-| npm | >= 10.x |
-
-Hoặc chỉ cần **Docker Desktop** nếu chạy bằng Docker.
+**Stack**: Laravel 13 (PHP 8.3) + React 19 (Vite 8) + MySQL 8.4 + Tailwind CSS 4
 
 ---
 
+## Mục lục
 
-## Chạy bằng Docker
+1. [Cài đặt bằng Docker (khuyên dùng)](#1-cài-đặt-bằng-docker-khuyên-dùng)
+2. [Cài đặt thủ công (không Docker)](#2-cài-đặt-thủ-công-không-docker)
+3. [Tài khoản test](#3-tài-khoản-test)
+4. [Cách dùng](#4-cách-dùng)
+5. [Các lệnh thường dùng](#5-các-lệnh-thường-dùng)
+6. [Cấu trúc project](#6-cấu-trúc-project)
+7. [API tổng quan](#7-api-tổng-quan)
+8. [Xử lý sự cố](#8-xử-lý-sự-cố)
 
-### Windows (1 lệnh, đơn giản)
+---
 
-Chạy từ thư mục gốc project:
+## 1. Cài đặt bằng Docker (khuyên dùng)
+
+Cách này chỉ cần cài Docker Desktop, không cần cài PHP, Node.js, MySQL.
+
+### Bước 1: Cài Docker Desktop
+
+Tải và cài từ https://docs.docker.com/desktop/install/windows-install/
+
+Sau khi cài xong, mở Docker Desktop và chờ đến khi thấy trạng thái **"Engine running"** (icon Docker ở taskbar chuyển xanh).
+
+### Bước 2: Clone project
+
+```powershell
+git clone <repo-url> dulys-house-booking-system
+cd dulys-house-booking-system
+```
+
+### Bước 3: Khởi động
+
+**Windows (PowerShell):**
 
 ```powershell
 .\start-docker.ps1
 ```
 
-Script sẽ tự:
+Script sẽ tự động:
+- Kiểm tra Docker Desktop đang chạy (tự mở nếu chưa)
+- Kiểm tra port 80 và 8000 có trống không
+- Khởi động MySQL, Backend, Frontend
+- Lần đầu: tự chạy migration + seed dữ liệu mẫu
 
-- kiểm tra Docker Desktop daemon (và tự mở Docker Desktop nếu cần)
-- kiểm tra port 80 và 8000 trước khi chạy
-- chạy `docker compose up -d`
+**Hoặc chạy thủ công:**
 
-Dừng hệ thống:
+```bash
+docker compose up -d --build
+```
+
+### Bước 4: Truy cập
+
+| Dịch vụ | URL |
+|---------|-----|
+| Frontend (giao diện) | http://localhost |
+| Backend API | http://localhost:8000/api |
+
+Chờ khoảng 30 giây sau lần chạy đầu tiên để backend chạy xong migration và seed data.
+
+### Dừng hệ thống
 
 ```powershell
-.\stop-docker.ps1
+.\stop-docker.ps1             # Dừng (giữ data)
+.\stop-docker.ps1 -Destroy    # Dừng + xóa toàn bộ data
 ```
 
-### Cách chạy thủ công (nếu không dùng script)
+### Các tùy chọn hữu ích
 
-```bash
-# Khởi động tất cả services
-docker compose up -d
+```powershell
+# Rebuild images (sau khi sửa code)
+.\start-docker.ps1 -Build
 
-# Chạy migration + seed (lần đầu)
-docker compose exec backend php artisan migrate --seed
+# Reset toàn bộ (xóa DB, seed lại từ đầu)
+.\start-docker.ps1 -Reset -Build
 
-# Truy cập
-# Frontend:  http://localhost
-# API:       http://localhost:8000/api
-```
-
-MySQL **không mở cổng ra máy host** theo mặc định để tránh xung đột với MySQL local (ổn định hơn cho người non-tech).
-
-`storage` của Laravel hiện dùng **Docker named volume** thay vì bind mount để chạy nhanh và ổn định hơn trên Windows/Docker Desktop. Nếu cần xóa sạch file lưu trữ cùng database, dùng `docker compose down -v`.
-
-Nếu cần truy cập MySQL từ host (ví dụ DBeaver, TablePlus), dùng file override:
-
-```bash
+# Mở port MySQL cho công cụ ngoài (DBeaver, TablePlus...)
 docker compose -f docker-compose.yml -f docker-compose.db-port.yml up -d
-# MySQL host port: 3307
+# MySQL host: localhost:3307 | user: root | pass: secret | db: dulys_house
 ```
-
-Dừng:
-
-```bash
-docker compose down
-
-# Xóa cả data MySQL + storage Docker volume:
-docker compose down -v
-```
-
-### Checklist xử lý nhanh sự cố (Docker)
-
-- Docker Desktop không chạy:
-  mở Docker Desktop và chờ trạng thái `Engine running`, sau đó chạy lại `.\start-docker.ps1`.
-- Port 80 đang bận:
-  dừng web server khác (IIS, nginx, Apache, app khác). Kiểm tra nhanh: `netstat -ano | findstr :80`.
-- Port 8000 đang bận:
-  dừng backend/app khác dùng port này. Kiểm tra nhanh: `netstat -ano | findstr :8000`.
-- Cần mở cổng DB cho tool ngoài (DBeaver/TablePlus):
-  chạy `docker compose -f docker-compose.yml -f docker-compose.db-port.yml up -d` (MySQL host port `3307`).
-- Kiểm tra trạng thái/log nhanh:
-  `docker compose ps`
-  `docker compose logs -f --tail=100 backend frontend mysql`
 
 ---
 
-## Tài khoản test (đã seed)
+## 2. Cài đặt thủ công (không Docker)
 
-| Email | Password | Vai trò | Truy cập |
-|-------|----------|---------|----------|
-| admin@dulyshouse.vn | password | Admin | Full quyền |
-| owner@dulyshouse.vn | password | Owner | Quản lý cơ sở |
-| staff@dulyshouse.vn | password | Staff | Lễ tân, check-in/out |
-| guest@dulyshouse.vn | password | Guest | Đặt phòng |
+### Yêu cầu
 
----
+| Tool | Version | Tải về |
+|------|---------|--------|
+| PHP | >= 8.3 | https://www.php.net/downloads |
+| Composer | >= 2.x | https://getcomposer.org/download/ |
+| Node.js | >= 20.x | https://nodejs.org/ |
+| MySQL | >= 8.0 | https://dev.mysql.com/downloads/ |
 
-## Các lệnh thường dùng
+### Bước 1: Tạo database
 
-### Backend
+Mở MySQL client (terminal hoặc GUI) và chạy:
+
+```sql
+CREATE DATABASE dulys_house CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### Bước 2: Cài backend
 
 ```bash
 cd backend
 
-php artisan serve                      # Chạy server dev
-php artisan migrate                    # Chạy migration mới
-php artisan migrate:fresh --seed       # Reset toàn bộ DB + seed lại
-php artisan db:seed                    # Chỉ seed data
-php artisan route:list                 # Xem danh sách API routes
-php artisan test                       # Chạy test
-php artisan test --filter=BookingTest  # Chạy 1 test cụ thể
-php artisan tinker                     # REPL để test nhanh
-vendor/bin/pint                        # Format code (Laravel Pint)
+# Cài dependencies
+composer install
+
+# Tạo file cấu hình
+cp .env.example .env
+
+# Mở file .env, sửa thông tin database:
+#   DB_DATABASE=dulys_house
+#   DB_USERNAME=root
+#   DB_PASSWORD=          (mật khẩu MySQL của bạn)
+
+# Tạo key
+php artisan key:generate
+
+# Tạo bảng + dữ liệu mẫu
+php artisan migrate --seed
+
+# Chạy server
+php artisan serve
+# => Backend chạy tại http://localhost:8000
 ```
 
-### Frontend
+### Bước 3: Cài frontend
+
+Mở terminal mới (giữ backend đang chạy):
 
 ```bash
 cd frontend
 
-npm run dev       # Dev server (HMR)
-npm run build     # Build production
+# Cài dependencies
+npm install
+
+# Chạy dev server
+npm run dev
+# => Frontend chạy tại http://localhost:5173
+```
+
+### Bước 4: Truy cập
+
+Mở trình duyệt tại **http://localhost:5173**
+
+Vite tự proxy `/api` sang `localhost:8000`, nên không cần cấu hình CORS.
+
+---
+
+## 3. Tài khoản test
+
+Sau khi seed, hệ thống có sẵn các tài khoản:
+
+| Email | Mật khẩu | Vai trò | Quyền |
+|-------|----------|---------|-------|
+| admin@dulyshouse.vn | password | Admin | Full quyền quản trị |
+| owner@dulyshouse.vn | password | Owner | Quản lý cơ sở |
+| staff@dulyshouse.vn | password | Staff | Lễ tân, check-in/out |
+| guest@dulyshouse.vn | password | Guest | Đặt phòng, xem đơn |
+
+---
+
+## 4. Cách dùng
+
+### Khách hàng (Guest)
+
+1. Vào trang chủ, chọn homestay hoặc tìm phòng trống
+2. Chọn ngày nhận/trả phòng, số khách
+3. Đăng nhập (hoặc đăng ký) rồi xác nhận đặt phòng
+4. Xem lịch sử đặt phòng ở "Đặt phòng của tôi"
+
+### Quản trị (Admin/Staff)
+
+1. Đăng nhập bằng tài khoản admin/staff
+2. Truy cập `/admin` — Dashboard tổng quan, biểu đồ doanh thu
+3. **Đặt phòng**: Duyệt đơn (Xác nhận → Nhận phòng → Trả phòng)
+4. **Lịch phòng**: Xem lịch, chặn ngày, điều chỉnh giá
+5. **Báo cáo**: Doanh thu, công suất, khách hàng
+
+---
+
+## 5. Các lệnh thường dùng
+
+### Backend (Laravel)
+
+```bash
+cd backend
+
+php artisan serve                      # Chạy server dev (:8000)
+php artisan migrate                    # Chạy migration mới
+php artisan migrate:fresh --seed       # Reset toàn bộ DB + seed lại
+php artisan db:seed                    # Chỉ seed data
+php artisan route:list                 # Danh sách tất cả API routes
+php artisan test                       # Chạy tests
+php artisan tinker                     # REPL để thử nhanh
+vendor/bin/pint                        # Format code (Laravel Pint)
+```
+
+### Frontend (React)
+
+```bash
+cd frontend
+
+npm run dev       # Dev server + HMR (:5173)
+npm run build     # Build production → dist/
 npm run preview   # Preview bản build
 npm run lint      # Kiểm tra code style
 ```
 
+### Docker
+
+```bash
+docker compose ps                          # Trạng thái services
+docker compose logs -f backend             # Xem log backend (realtime)
+docker compose logs -f --tail=50           # Log tất cả (50 dòng gần nhất)
+docker compose exec backend php artisan tinker   # Tinker trong container
+docker compose exec backend php artisan migrate:fresh --seed  # Reset DB
+```
+
 ---
 
-## Cấu trúc project
+## 6. Cấu trúc project
 
 ```
 dulys-house-booking-system/
-├── backend/                    # Laravel 13 API
+├── backend/                          # Laravel 13 API
 │   ├── app/
-│   │   ├── Http/
-│   │   │   ├── Controllers/Api/       # Public API controllers
-│   │   │   │   └── Admin/             # Admin API controllers
-│   │   │   ├── Middleware/            # CheckRole middleware
-│   │   │   └── Requests/             # Form validation
-│   │   ├── Models/                    # Eloquent models (UUID)
-│   │   ├── Services/                  # Business logic
-│   │   │   ├── AvailabilityService    # Tìm phòng trống
-│   │   │   ├── BookingService         # Tạo/hủy/check-in/out
-│   │   │   ├── PricingService         # Tính giá
-│   │   │   ├── PaymentService         # Thanh toán
-│   │   │   ├── RoomStatusService      # Trạng thái phòng
-│   │   │   └── DashboardService       # Báo cáo
-│   │   └── Traits/                    # ApiResponse trait
+│   │   ├── Http/Controllers/Api/     # API controllers
+│   │   │   └── Admin/                # Admin controllers (role-gated)
+│   │   ├── Models/                   # 13 Eloquent models (UUID PKs)
+│   │   ├── Services/                 # Business logic layer
+│   │   │   ├── BookingService        #   Tạo/hủy/check-in/out
+│   │   │   ├── AvailabilityService   #   Tìm phòng trống
+│   │   │   ├── PricingService        #   Tính giá theo đêm
+│   │   │   └── DashboardService      #   Thống kê, báo cáo
+│   │   └── Traits/ApiResponse        # JSON response format
 │   ├── database/
-│   │   ├── migrations/                # 12 migration files
-│   │   └── seeders/                   # Data mẫu tiếng Việt
-│   └── routes/api.php                 # 46 API endpoints
+│   │   ├── migrations/               # Schema (UUID, Vietnamese mapping)
+│   │   └── seeders/                  # 12 tháng dữ liệu mẫu
+│   └── routes/api.php                # Tất cả API endpoints
 │
-├── frontend/                   # React 19 + Vite + Tailwind
+├── frontend/                         # React 19 SPA
 │   └── src/
-│       ├── api/client.js              # Axios instance
-│       ├── layouts/                   # PublicLayout, AdminLayout
-│       ├── pages/public/              # 8 trang public
-│       ├── pages/admin/               # 6 trang admin
-│       └── components/                # Shared components
+│       ├── api/                      # Axios client + API modules
+│       ├── layouts/                  # PublicLayout, AdminLayout
+│       ├── pages/
+│       │   ├── public/               # 9 trang khách (tìm phòng, đặt phòng...)
+│       │   └── admin/                # 8 trang quản trị (dashboard, báo cáo...)
+│       └── components/               # UI components (shadcn-style)
 │
-├── docker-compose.yml          # MySQL + Backend + Frontend
-├── CLAUDE.md                   # Context cho AI assistant
-└── Plan.md                     # Kế hoạch chi tiết dự án
+├── docker-compose.yml                # MySQL + Backend + Frontend
+├── start-docker.ps1                  # Script khởi động (Windows)
+└── stop-docker.ps1                   # Script dừng (Windows)
 ```
 
 ---
 
-## API Overview
+## 7. API tổng quan
 
 ### Public (không cần đăng nhập)
+
 ```
-POST   /api/auth/register          Đăng ký
-POST   /api/auth/login             Đăng nhập
-GET    /api/homestays              Danh sách homestay
-GET    /api/homestays/{id}         Chi tiết homestay
-POST   /api/search/availability    Tìm phòng trống
+POST   /api/auth/register                 Đăng ký
+POST   /api/auth/login                    Đăng nhập → trả token
+GET    /api/homestays                     Danh sách homestay
+GET    /api/homestays/{slug}              Chi tiết homestay
+GET    /api/homestays/{slug}/reviews      Đánh giá
+POST   /api/search/availability           Tìm phòng trống
 ```
 
-### Authenticated (cần Bearer token)
+### Authenticated (Bearer token)
+
 ```
-GET    /api/auth/me                Thông tin user
-POST   /api/bookings              Tạo đặt phòng
-GET    /api/bookings              Đặt phòng của tôi
-PATCH  /api/bookings/{id}/cancel  Hủy đặt phòng
+GET    /api/auth/me                       Thông tin user
+POST   /api/bookings                      Tạo đặt phòng
+GET    /api/bookings                      Đặt phòng của tôi
+PATCH  /api/bookings/{id}/cancel          Hủy đặt phòng
+POST   /api/reviews                       Viết đánh giá
+GET    /api/notifications                 Thông báo
 ```
 
-### Admin (cần role: admin/owner/staff)
+### Admin (role: admin/owner/staff)
+
 ```
-GET    /api/admin/dashboard/summary     Tổng quan
-GET    /api/admin/bookings              Danh sách đặt phòng
-PATCH  /api/admin/bookings/{id}/confirm Duyệt đơn
-PATCH  /api/admin/bookings/{id}/check-in   Check-in
-PATCH  /api/admin/bookings/{id}/check-out  Check-out
-CRUD   /api/admin/homestays             Quản lý cơ sở
-CRUD   /api/admin/room-types            Quản lý loại phòng
-CRUD   /api/admin/rooms                 Quản lý phòng
-GET    /api/admin/customers             Danh sách khách
-POST   /api/admin/payments              Ghi nhận thanh toán
+GET    /api/admin/dashboard/summary       Tổng quan hệ thống
+GET    /api/admin/dashboard/revenue       Doanh thu theo kỳ
+CRUD   /api/admin/homestays               Quản lý cơ sở
+CRUD   /api/admin/room-types              Quản lý loại phòng
+CRUD   /api/admin/rooms                   Quản lý phòng
+GET    /api/admin/bookings                Danh sách đặt phòng
+PATCH  /api/admin/bookings/{id}/confirm   Duyệt đơn
+PATCH  /api/admin/bookings/{id}/check-in  Check-in
+PATCH  /api/admin/bookings/{id}/check-out Check-out
+PATCH  /api/admin/bookings/{id}/cancel    Hủy đơn
+GET    /api/admin/customers               Danh sách khách
+POST   /api/admin/payments                Ghi nhận thanh toán
+GET    /api/admin/reports/*               Báo cáo (doanh thu, công suất, khách hàng)
 ```
 
----
-
-## Test nhanh API bằng curl
+### Test nhanh API (curl)
 
 ```bash
 # Đăng nhập
 curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"email":"guest@dulyshouse.vn","password":"password"}'
+  -d '{"email":"admin@dulyshouse.vn","password":"password"}'
 
-# Copy token từ response, sau đó:
-
-# Tìm phòng
-curl -s -X POST http://localhost:8000/api/search/availability \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"check_in":"2026-04-10","check_out":"2026-04-12","guests":2}'
-
-# Xem homestay
-curl -s http://localhost:8000/api/homestays \
+# Lấy token từ response, dùng cho các request tiếp theo:
+curl -s http://localhost:8000/api/admin/dashboard/summary \
+  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json"
 ```
 
 ---
 
-## Troubleshooting
+## 8. Xử lý sự cố
 
-**"SQLSTATE[HY000] [1049] Unknown database 'dulys_house'"**
-→ Chưa tạo database. Chạy: `mysql -u root -e "CREATE DATABASE dulys_house;"`
+### Docker
 
-**"Data truncated for column 'tokenable_id'"**
-→ Sanctum migration dùng sai type. Kiểm tra file migration `create_personal_access_tokens` phải dùng `uuidMorphs('tokenable')` thay vì `morphs('tokenable')`.
+| Lỗi | Cách sửa |
+|-----|----------|
+| Docker Desktop không chạy | Mở Docker Desktop, chờ "Engine running", chạy lại script |
+| Port 80 bận | Tắt IIS/nginx/Apache hoặc app khác. Kiểm tra: `netstat -ano \| findstr :80` |
+| Port 8000 bận | Tắt backend local hoặc app khác dùng port này |
+| Backend báo lỗi DB | Chờ 30s để MySQL sẵn sàng, hoặc xem log: `docker compose logs backend` |
+| Muốn reset toàn bộ | `.\start-docker.ps1 -Reset -Build` |
 
-**Frontend không gọi được API**
-→ Đảm bảo backend đang chạy trên port 8000. Vite proxy chỉ hoạt động khi dùng `npm run dev`.
+### Local development
 
-**"CSRF token mismatch"**
-→ Thêm header `Accept: application/json` vào request. Laravel sẽ trả JSON thay vì redirect.
+| Lỗi | Cách sửa |
+|-----|----------|
+| `Unknown database 'dulys_house'` | Chưa tạo DB: `CREATE DATABASE dulys_house;` |
+| `Data truncated for column 'tokenable_id'` | Migration Sanctum phải dùng `uuidMorphs('tokenable')` |
+| Frontend không gọi được API | Backend phải chạy ở port 8000. Dùng `npm run dev` (không phải `npm run preview`) |
+| `CSRF token mismatch` | Thêm header `Accept: application/json` vào request |
+| Muốn reset DB | `cd backend && php artisan migrate:fresh --seed` |
