@@ -218,6 +218,7 @@ export default function AdminLayout() {
             </div>
 
             <div className="flex items-center gap-3">
+              <NotificationBell />
               <div className="hidden items-center gap-2 rounded-full border border-border bg-white/85 px-4 py-2 text-sm text-on-surface-variant md:flex">
                 <Wallet className="h-4 w-4 text-primary-dim" />
                 {user?.name || 'Admin'}
