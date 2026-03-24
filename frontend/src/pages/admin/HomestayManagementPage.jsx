@@ -6,6 +6,7 @@ import {
   updateHomestay,
   deleteHomestay,
 } from '../../api/admin';
+import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -152,6 +153,7 @@ export default function HomestayManagementPage() {
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const { addToast } = useToast();
 
   const fetchHomestays = useCallback(() => {
     setLoading(true);
@@ -212,7 +214,7 @@ export default function HomestayManagementPage() {
       setDeleteDialog({ open: false, item: null });
       fetchHomestays();
     } catch {
-      alert('Không thể xoá cơ sở này.');
+      addToast('Không thể xoá cơ sở này.', 'error');
     } finally {
       setDeleteLoading(false);
     }
