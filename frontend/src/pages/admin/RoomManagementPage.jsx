@@ -12,6 +12,7 @@ import {
   updateRoomStatus,
   getAdminHomestays,
 } from '../../api/admin';
+import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -312,6 +313,7 @@ function RoomTypesTab() {
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const { addToast } = useToast();
 
   const fetch = useCallback(() => {
     setLoading(true);
@@ -378,7 +380,7 @@ function RoomTypesTab() {
       setDeleteDialog({ open: false, item: null });
       fetch();
     } catch {
-      alert('Không thể xoá loại phòng này.');
+      addToast('Không thể xoá loại phòng này.', 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -530,6 +532,7 @@ function RoomsTab() {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(null);
+  const { addToast } = useToast();
 
   const fetch = useCallback(() => {
     setLoading(true);
@@ -596,7 +599,7 @@ function RoomsTab() {
       setDeleteDialog({ open: false, item: null });
       fetch();
     } catch {
-      alert('Không thể xoá phòng này.');
+      addToast('Không thể xoá phòng này.', 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -610,7 +613,7 @@ function RoomsTab() {
         prev.map((r) => (r.id === id ? { ...r, status } : r))
       );
     } catch {
-      alert('Không thể cập nhật trạng thái phòng.');
+      addToast('Không thể cập nhật trạng thái phòng.', 'error');
     } finally {
       setStatusLoading(null);
     }
