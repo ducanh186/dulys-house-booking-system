@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Search, Users, Calendar, MapPin, BedDouble, AlertCircle, Star } from 'lucide-react';
+import { Search, Users, Calendar, MapPin, BedDouble, AlertCircle, Star, Building2 } from 'lucide-react';
 import { searchAvailability, getHomestays } from '../../api/homestays';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
@@ -23,6 +23,7 @@ export default function SearchResultPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [mode, setMode] = useState(checkIn && checkOut ? 'search' : 'listing');
+  const [homestayFilter, setHomestayFilter] = useState('');
 
   useEffect(() => {
     if (checkIn && checkOut) {
@@ -100,6 +101,28 @@ export default function SearchResultPage() {
     fetchAvailability();
   }
 
+  // Derive unique homestay list for filter dropdown
+  const homestayOptions = (() => {
+    const seen = new Map();
+    if (mode === 'search') {
+      results.forEach((item) => {
+        if (!seen.has(item.homestay.id)) seen.set(item.homestay.id, item.homestay.name);
+      });
+    } else {
+      results.forEach((h) => {
+        if (!seen.has(h.id)) seen.set(h.id, h.name);
+      });
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  })();
+
+  // Filter results by selected homestay
+  const filteredResults = homestayFilter
+    ? mode === 'search'
+      ? results.filter((item) => item.homestay.id === homestayFilter)
+      : results.filter((h) => h.id === homestayFilter)
+    : results;
+
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -144,11 +167,33 @@ export default function SearchResultPage() {
                 <Input
                   type="number"
                   min="1"
+                  max="4"
                   value={guests}
-                  onChange={(e) => setGuests(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || (Number(val) >= 1 && Number(val) <= 4)) {
+                      setGuests(val);
+                    }
+                  }}
                   placeholder="1"
                   className="pl-9"
                 />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 flex-1 sm:max-w-[200px]">
+              <label className="text-xs font-medium text-on-surface-variant">Cơ sở</label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant pointer-events-none" />
+                <select
+                  value={homestayFilter}
+                  onChange={(e) => setHomestayFilter(e.target.value)}
+                  className="flex h-10 w-full rounded-full border border-input bg-background pl-9 pr-3 py-2 text-sm font-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none"
+                >
+                  <option value="">Tất cả cơ sở</option>
+                  {homestayOptions.map((h) => (
+                    <option key={h.id} value={h.id}>{h.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex flex-col justify-end">
@@ -172,7 +217,7 @@ export default function SearchResultPage() {
           </div>
         )}
 
-        {!loading && !error && results.length === 0 && (
+        {!loading && !error && filteredResults.length === 0 && (
           <div className="text-center py-20">
             <BedDouble className="mx-auto h-12 w-12 text-on-surface-variant mb-4" />
             <p className="font-headline text-lg font-semibold text-on-surface">
@@ -184,14 +229,14 @@ export default function SearchResultPage() {
           </div>
         )}
 
-        {!loading && !error && results.length > 0 && (
+        {!loading && !error && filteredResults.length > 0 && (
           <div className="space-y-8">
             {mode === 'search' ? (
               <>
                 <p className="text-sm text-on-surface-variant">
-                  Tìm thấy <span className="font-semibold text-on-surface">{results.length}</span> homestay có phòng trống
+                  Tìm thấy <span className="font-semibold text-on-surface">{filteredResults.length}</span> homestay có phòng trống
                 </p>
-                {results.map((item) => (
+                {filteredResults.map((item) => (
                   <SearchResultGroup
                     key={item.homestay.id}
                     homestay={item.homestay}
@@ -204,10 +249,10 @@ export default function SearchResultPage() {
             ) : (
               <>
                 <p className="text-sm text-on-surface-variant">
-                  <span className="font-semibold text-on-surface">{results.length}</span> homestay đang hoạt động
+                  <span className="font-semibold text-on-surface">{filteredResults.length}</span> homestay đang hoạt động
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {results.map((homestay) => (
+                  {filteredResults.map((homestay) => (
                     <HomestayCard key={homestay.id} homestay={homestay} />
                   ))}
                 </div>
