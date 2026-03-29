@@ -200,6 +200,7 @@ export default function BookingPage() {
                       onChange={handleChange}
                       placeholder="Nguyen Van A"
                       error={formErrors.customer_name}
+                      required
                     />
                     <Field
                       label="Số điện thoại"
@@ -209,6 +210,7 @@ export default function BookingPage() {
                       onChange={handleChange}
                       placeholder="0901234567"
                       error={formErrors.customer_phone}
+                      required
                     />
                   </div>
 
@@ -220,6 +222,7 @@ export default function BookingPage() {
                     onChange={handleChange}
                     placeholder="email@example.com"
                     error={formErrors.customer_email}
+                    required
                   />
 
                   <div>
@@ -241,7 +244,7 @@ export default function BookingPage() {
 
             <Card className="border-border">
               <CardHeader>
-                <CardTitle className="font-headline text-xl">Phương thức thanh toán</CardTitle>
+                <CardTitle className="font-headline text-xl">Phương thức thanh toán <span className="text-error">*</span></CardTitle>
                 <CardDescription>Chọn một cách thanh toán phù hợp với bạn.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -391,11 +394,12 @@ function StepIndicator({ number, label, active }) {
   );
 }
 
-function Field({ label, error, ...props }) {
+function Field({ label, error, required = false, ...props }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-sm font-medium text-on-surface">
         {label}
+        {required && <span className="text-error ml-0.5">*</span>}
       </label>
       <Input {...props} className={error ? 'border-error' : ''} />
       {error && <p className="text-xs text-error">{error}</p>}
