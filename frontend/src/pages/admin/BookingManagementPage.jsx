@@ -202,6 +202,15 @@ function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, load
   );
 }
 
+const STATUS_FILTERS = [
+  { value: '', label: 'Tất cả' },
+  { value: 'pending', label: 'Chờ xác nhận' },
+  { value: 'confirmed', label: 'Đã xác nhận' },
+  { value: 'checked_in', label: 'Nhận phòng' },
+  { value: 'checked_out', label: 'Trả phòng' },
+  { value: 'cancelled', label: 'Hủy phòng' },
+];
+
 export default function BookingManagementPage() {
   const [bookings, setBookings] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -210,6 +219,7 @@ export default function BookingManagementPage() {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, bookingId: null });
+  const [statusFilter, setStatusFilter] = useState('');
 
   async function fetchBookings() {
     setLoading(true);
@@ -244,12 +254,16 @@ export default function BookingManagementPage() {
   }
 
   const summary = useMemo(() => {
-    const counts = { total: bookings.length, pending: 0, confirmed: 0, checked_in: 0, checked_out: 0 };
+    const counts = { total: bookings.length, pending: 0, confirmed: 0, checked_in: 0, checked_out: 0, cancelled: 0 };
     for (const booking of bookings) {
       if (counts[booking.status] != null) counts[booking.status] += 1;
     }
     return counts;
   }, [bookings]);
+
+  const filteredBookings = statusFilter
+    ? bookings.filter((b) => b.status === statusFilter)
+    : bookings;
 
   return (
     <div className="space-y-6">
@@ -275,13 +289,33 @@ export default function BookingManagementPage() {
       </div>
 
       <Card className="admin-card">
-        <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-border/60 px-6 py-5">
-          <div>
+        <CardHeader className="space-y-4 border-b border-border/60 px-6 py-5">
+          <div className="flex items-center justify-between">
             <CardTitle className="font-headline text-lg font-extrabold text-on-surface">
               Danh sách đặt phòng
             </CardTitle>
+            <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">
+              {statusFilter ? filteredBookings.length : summary.total} đơn
+            </Badge>
           </div>
-          <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">{summary.total} đơn</Badge>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_FILTERS.map((sf) => (
+              <button
+                key={sf.value}
+                onClick={() => setStatusFilter(sf.value)}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  statusFilter === sf.value
+                    ? 'bg-primary text-white'
+                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-highest'
+                }`}
+              >
+                {sf.label}
+                {sf.value && summary[sf.value] != null && (
+                  <span className="ml-1.5 opacity-75">({summary[sf.value]})</span>
+                )}
+              </button>
+            ))}
+          </div>
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6">
@@ -289,7 +323,7 @@ export default function BookingManagementPage() {
             <LoadingSpinner />
           ) : error ? (
             <p className="text-sm text-error">{error}</p>
-          ) : bookings.length === 0 ? (
+          ) : filteredBookings.length === 0 ? (
             <EmptyState
               icon={CalendarDays}
               title="Chưa có đặt phòng nào"
@@ -298,7 +332,7 @@ export default function BookingManagementPage() {
             />
           ) : (
             <div className="space-y-4">
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <BookingCard
                   key={booking.id}
                   booking={booking}
