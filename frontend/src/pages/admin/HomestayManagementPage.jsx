@@ -6,6 +6,7 @@ import {
   updateHomestay,
   deleteHomestay,
 } from '../../api/admin';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -153,7 +154,9 @@ export default function HomestayManagementPage() {
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const { user } = useAuth();
   const { addToast } = useToast();
+  const isAdmin = user?.role === 'admin';
 
   const fetchHomestays = useCallback(() => {
     setLoading(true);
@@ -229,7 +232,7 @@ export default function HomestayManagementPage() {
             Thêm, sửa, xoá thông tin các cơ sở lưu trú.
           </p>
         </div>
-        {!showForm && (
+        {!showForm && isAdmin && (
           <Button onClick={openCreate} className="gap-2">
             <Plus className="w-4 h-4" />
             Thêm cơ sở
@@ -298,9 +301,11 @@ export default function HomestayManagementPage() {
                     <th className="text-left px-4 py-3 font-semibold text-on-surface-variant font-body">
                       Trạng thái
                     </th>
-                    <th className="text-center px-4 py-3 font-semibold text-on-surface-variant font-body">
-                      Hành động
-                    </th>
+                    {isAdmin && (
+                      <th className="text-center px-4 py-3 font-semibold text-on-surface-variant font-body">
+                        Hành động
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -319,28 +324,30 @@ export default function HomestayManagementPage() {
                       <td className="px-4 py-4">
                         <Badge className={statusClass(h.is_active)}>{statusLabel(h.is_active)}</Badge>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEdit(h)}
-                            className="gap-1"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            Sửa
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setDeleteDialog({ open: true, item: h })}
-                            className="gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Xoá
-                          </Button>
-                        </div>
-                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEdit(h)}
+                              className="gap-1"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Sửa
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setDeleteDialog({ open: true, item: h })}
+                              className="gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Xoá
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
