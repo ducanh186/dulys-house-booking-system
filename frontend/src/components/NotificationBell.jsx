@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount } from '../api/notifications';
 
@@ -14,7 +14,8 @@ function timeAgo(dateStr) {
 }
 
 export default function NotificationBell() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -43,13 +44,26 @@ export default function NotificationBell() {
 
   if (!isAuthenticated) return null;
 
-  const markRead = async (n) => {
-    if (n.read_at) return;
-    try {
-      await markNotificationRead(n.id);
-      setItems(prev => prev.map(i => i.id === n.id ? { ...i, read_at: new Date().toISOString() } : i));
-      setCount(c => Math.max(0, c - 1));
-    } catch {}
+  const handleNotificationClick = async (n) => {
+    // Mark as read if unread
+    if (!n.read_at) {
+      try {
+        await markNotificationRead(n.id);
+        setItems(prev => prev.map(i => i.id === n.id ? { ...i, read_at: new Date().toISOString() } : i));
+        setCount(c => Math.max(0, c - 1));
+      } catch {}
+    }
+    // Navigate to the booking if metadata has booking_id
+    const bookingId = n.data?.booking_id || n.metadata?.booking_id;
+    if (bookingId) {
+      setOpen(false);
+      const isStaff = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'staff';
+      if (isStaff) {
+        navigate('/admin/bookings');
+      } else {
+        navigate('/my-bookings');
+      }
+    }
   };
 
   const markAll = async () => {
@@ -85,7 +99,7 @@ export default function NotificationBell() {
               <p className="py-8 text-center text-sm text-on-surface-variant">Không có thông báo mới</p>
             ) : (
               items.map(n => (
-                <button key={n.id} onClick={() => markRead(n)} className={`w-full text-left px-4 py-3 hover:bg-surface-container transition-colors border-b border-border last:border-0 ${!n.read_at ? 'bg-blue-50' : ''}`}>
+                <button key={n.id} onClick={() => handleNotificationClick(n)} className={`w-full text-left px-4 py-3 hover:bg-surface-container transition-colors border-b border-border last:border-0 ${!n.read_at ? 'bg-blue-50' : ''}`}>
                   <p className={`text-sm mb-0.5 ${!n.read_at ? 'font-semibold' : ''}`}>{n.title}</p>
                   <p className="text-xs text-on-surface-variant line-clamp-2">{n.message}</p>
                   <p className="text-[10px] text-on-surface-variant mt-1">{timeAgo(n.created_at)}</p>
