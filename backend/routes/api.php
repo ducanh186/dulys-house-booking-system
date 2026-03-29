@@ -65,23 +65,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
 
-    // ─── Admin / Owner / Staff ──────────────────────────
+    // ─── Admin / Owner / Staff (read-only for all) ─────
     Route::middleware(['role:admin,owner,staff', 'throttle:60,1'])->prefix('admin')->group(function () {
         // Dashboard
         Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary']);
         Route::get('/dashboard/revenue', [AdminDashboardController::class, 'revenue']);
 
-        // Homestays CRUD
-        Route::apiResource('homestays', AdminHomestayController::class);
+        // Read endpoints (all admin roles)
+        Route::get('/homestays', [AdminHomestayController::class, 'index']);
+        Route::get('/homestays/{homestay}', [AdminHomestayController::class, 'show']);
+        Route::get('/room-types', [AdminRoomTypeController::class, 'index']);
+        Route::get('/room-types/{roomType}', [AdminRoomTypeController::class, 'show']);
+        Route::get('/rooms', [AdminRoomController::class, 'index']);
+        Route::get('/rooms/{room}', [AdminRoomController::class, 'show']);
 
-        // Room Types CRUD
-        Route::apiResource('room-types', AdminRoomTypeController::class);
-
-        // Rooms CRUD
-        Route::apiResource('rooms', AdminRoomController::class);
-        Route::patch('/rooms/{room}/status', [AdminRoomController::class, 'updateStatus']);
-
-        // Booking management
+        // Booking management (read + lifecycle actions for all)
         Route::get('/bookings', [AdminBookingController::class, 'index']);
         Route::get('/bookings/{booking}', [AdminBookingController::class, 'show']);
         Route::patch('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm']);
@@ -89,28 +87,51 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/bookings/{booking}/check-out', [AdminBookingController::class, 'checkOut']);
         Route::patch('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel']);
 
-        // Payments
+        // Payments (read for all, create for all — operational)
         Route::get('/payments', [AdminPaymentController::class, 'index']);
         Route::post('/payments', [AdminPaymentController::class, 'store']);
 
-        // Customers
+        // Customers (read-only)
         Route::get('/customers', [AdminCustomerController::class, 'index']);
         Route::get('/customers/{customer}', [AdminCustomerController::class, 'show']);
 
-        // Availability Calendar
+        // Availability Calendar (read)
         Route::get('/room-types/{roomType}/calendar', [AdminAvailabilityController::class, 'calendar']);
-        Route::post('/room-types/{roomType}/block-dates', [AdminAvailabilityController::class, 'blockDates']);
-        Route::delete('/blocked-dates/{blockedDate}', [AdminAvailabilityController::class, 'unblock']);
 
-        // Pricing Management
+        // Pricing (read)
         Route::get('/room-types/{roomType}/pricing', [AdminPricingController::class, 'index']);
-        Route::post('/room-types/{roomType}/price-overrides', [AdminPricingController::class, 'store']);
-        Route::delete('/price-overrides/{priceOverride}', [AdminPricingController::class, 'destroy']);
 
         // Reports
         Route::get('/reports/occupancy', [AdminReportController::class, 'occupancy']);
         Route::get('/reports/cancellations', [AdminReportController::class, 'cancellations']);
         Route::get('/reports/revenue-by-homestay', [AdminReportController::class, 'revenueByHomestay']);
         Route::get('/reports/customers', [AdminReportController::class, 'customers']);
+    });
+
+    // ─── Admin-only write operations ──────────────────────
+    Route::middleware(['role:admin', 'throttle:60,1'])->prefix('admin')->group(function () {
+        // Homestays CUD (create, update, delete)
+        Route::post('/homestays', [AdminHomestayController::class, 'store']);
+        Route::put('/homestays/{homestay}', [AdminHomestayController::class, 'update']);
+        Route::delete('/homestays/{homestay}', [AdminHomestayController::class, 'destroy']);
+
+        // Room Types CUD
+        Route::post('/room-types', [AdminRoomTypeController::class, 'store']);
+        Route::put('/room-types/{roomType}', [AdminRoomTypeController::class, 'update']);
+        Route::delete('/room-types/{roomType}', [AdminRoomTypeController::class, 'destroy']);
+
+        // Rooms CUD
+        Route::post('/rooms', [AdminRoomController::class, 'store']);
+        Route::put('/rooms/{room}', [AdminRoomController::class, 'update']);
+        Route::delete('/rooms/{room}', [AdminRoomController::class, 'destroy']);
+        Route::patch('/rooms/{room}/status', [AdminRoomController::class, 'updateStatus']);
+
+        // Availability (write)
+        Route::post('/room-types/{roomType}/block-dates', [AdminAvailabilityController::class, 'blockDates']);
+        Route::delete('/blocked-dates/{blockedDate}', [AdminAvailabilityController::class, 'unblock']);
+
+        // Pricing (write)
+        Route::post('/room-types/{roomType}/price-overrides', [AdminPricingController::class, 'store']);
+        Route::delete('/price-overrides/{priceOverride}', [AdminPricingController::class, 'destroy']);
     });
 });
