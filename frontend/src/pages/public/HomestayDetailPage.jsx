@@ -104,11 +104,14 @@ export default function HomestayDetailPage() {
     });
   }
 
-  function changeQty(roomTypeId, delta) {
-    setQuantities((prev) => ({
-      ...prev,
-      [roomTypeId]: Math.max(1, (prev[roomTypeId] || 1) + delta),
-    }));
+  function changeQty(roomTypeId, delta, maxRooms) {
+    setQuantities((prev) => {
+      const next = Math.max(1, (prev[roomTypeId] || 1) + delta);
+      return {
+        ...prev,
+        [roomTypeId]: maxRooms != null ? Math.min(next, maxRooms) : next,
+      };
+    });
   }
 
   const nights = getNights();
@@ -238,7 +241,7 @@ export default function HomestayDetailPage() {
                   hasDateParams={hasDateParams}
                   nights={nights}
                   quantity={quantities[rt.id] || 1}
-                  onChangeQty={(delta) => changeQty(rt.id, delta)}
+                  onChangeQty={(delta) => changeQty(rt.id, delta, rt.rooms?.length)}
                   onBook={() => handleRoomAction(rt)}
                 />
               ))}
@@ -255,6 +258,7 @@ export default function HomestayDetailPage() {
 
 function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, onBook }) {
   const totalPrice = roomType.nightly_rate * nights * quantity;
+  const maxRooms = roomType.rooms?.length;
 
   return (
     <Card className="flex flex-col hover:shadow-lg transition-shadow duration-200 group">
@@ -300,6 +304,9 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
         <div className="w-full space-y-3">
           {hasDateParams ? (
             <>
+              {maxRooms != null && (
+                <p className="text-xs text-on-surface-variant">Còn {maxRooms} phòng trống</p>
+              )}
               <div className="flex items-center justify-between w-full">
                 <span className="text-sm text-on-surface-variant">Số lượng phòng:</span>
                 <div className="flex items-center gap-2">
@@ -314,7 +321,8 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
                   <span className="w-6 text-center font-semibold text-on-surface">{quantity}</span>
                   <button
                     onClick={() => onChangeQty(1)}
-                    className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-surface-container transition-colors"
+                    disabled={maxRooms != null && quantity >= maxRooms}
+                    className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-surface-container transition-colors disabled:opacity-40"
                     aria-label="Tăng số lượng"
                   >
                     <Plus className="h-3 w-3" />
