@@ -72,6 +72,8 @@ fix.md
 ses.txt
 tests/
 Plan.md
+notefeedback.pdf
+notefeedback.md
 # Misc
 *.log
 npm-debug.log*
