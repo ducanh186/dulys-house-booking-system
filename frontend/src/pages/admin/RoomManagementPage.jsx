@@ -12,6 +12,7 @@ import {
   updateRoomStatus,
   getAdminHomestays,
 } from '../../api/admin';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -298,7 +299,7 @@ function RoomForm({ initial, roomTypes, onSubmit, onCancel, submitting }) {
 }
 
 // ─── RoomTypes Tab ─────────────────────────────────────────────────────────────
-function RoomTypesTab() {
+function RoomTypesTab({ isAdmin }) {
   const [roomTypes, setRoomTypes] = useState([]);
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
@@ -392,7 +393,7 @@ function RoomTypesTab() {
         <p className="text-sm text-on-surface-variant font-body">
           Quản lý các loại phòng và giá phòng.
         </p>
-        {!showForm && (
+        {!showForm && isAdmin && (
           <Button onClick={openCreate} size="sm" className="gap-2">
             <Plus className="w-4 h-4" />
             Thêm loại phòng
@@ -400,7 +401,7 @@ function RoomTypesTab() {
         )}
       </div>
 
-      {showForm && (
+      {showForm && isAdmin && (
         <Card>
           <CardHeader className="pb-4 flex flex-row items-center justify-between">
             <CardTitle className="font-headline text-on-surface text-base">
@@ -453,9 +454,11 @@ function RoomTypesTab() {
                 <th className="text-right px-4 py-3 font-semibold text-on-surface-variant font-body">
                   Giá/đêm
                 </th>
-                <th className="text-center px-4 py-3 font-semibold text-on-surface-variant font-body">
-                  Hành động
-                </th>
+                {isAdmin && (
+                  <th className="text-center px-4 py-3 font-semibold text-on-surface-variant font-body">
+                    Hành động
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -474,23 +477,25 @@ function RoomTypesTab() {
                   <td className="px-4 py-3 text-right font-semibold text-primary font-body">
                     <PriceDisplay amount={rt.nightly_rate} />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(rt)} className="gap-1">
-                        <Pencil className="w-3.5 h-3.5" />
-                        Sửa
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteDialog({ open: true, item: rt })}
-                        className="gap-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Xoá
-                      </Button>
-                    </div>
-                  </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openEdit(rt)} className="gap-1">
+                          <Pencil className="w-3.5 h-3.5" />
+                          Sửa
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleteDialog({ open: true, item: rt })}
+                          className="gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Xoá
+                        </Button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -516,7 +521,7 @@ function RoomTypesTab() {
 }
 
 // ─── Rooms Tab ─────────────────────────────────────────────────────────────────
-function RoomsTab() {
+function RoomsTab({ isAdmin }) {
   const [rooms, setRooms] = useState([]);
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
@@ -625,7 +630,7 @@ function RoomsTab() {
         <p className="text-sm text-on-surface-variant font-body">
           Quản lý các phòng cụ thể và trạng thái.
         </p>
-        {!showForm && (
+        {!showForm && isAdmin && (
           <Button onClick={openCreate} size="sm" className="gap-2">
             <Plus className="w-4 h-4" />
             Thêm phòng
@@ -633,7 +638,7 @@ function RoomsTab() {
         )}
       </div>
 
-      {showForm && (
+      {showForm && isAdmin && (
         <Card>
           <CardHeader className="pb-4 flex flex-row items-center justify-between">
             <CardTitle className="font-headline text-on-surface text-base">
@@ -689,9 +694,11 @@ function RoomsTab() {
                 <th className="text-left px-4 py-3 font-semibold text-on-surface-variant font-body">
                   Vệ sinh
                 </th>
-                <th className="text-center px-4 py-3 font-semibold text-on-surface-variant font-body">
-                  Hành động
-                </th>
+                {isAdmin && (
+                  <th className="text-center px-4 py-3 font-semibold text-on-surface-variant font-body">
+                    Hành động
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -710,41 +717,49 @@ function RoomsTab() {
                     {r.room_type?.homestay?.name ?? '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <select
-                      value={r.status}
-                      disabled={statusLoading === r.id}
-                      onChange={(e) => handleStatusChange(r.id, e.target.value)}
-                      className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-body"
-                    >
-                      {ROOM_STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                    {isAdmin ? (
+                      <select
+                        value={r.status}
+                        disabled={statusLoading === r.id}
+                        onChange={(e) => handleStatusChange(r.id, e.target.value)}
+                        className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-body"
+                      >
+                        {ROOM_STATUS_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Badge className={roomStatusClass(r.status)}>
+                        {roomStatusLabel(r.status)}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Badge className={r.cleanliness === 'clean' ? 'bg-green-100 text-green-800 border-green-200' : r.cleanliness === 'cleaning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-gray-100 text-gray-700 border-gray-200'}>
                       {cleanlinessLabel(r.cleanliness)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(r)} className="gap-1">
-                        <Pencil className="w-3.5 h-3.5" />
-                        Sửa
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteDialog({ open: true, item: r })}
-                        className="gap-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Xoá
-                      </Button>
-                    </div>
-                  </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openEdit(r)} className="gap-1">
+                          <Pencil className="w-3.5 h-3.5" />
+                          Sửa
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleteDialog({ open: true, item: r })}
+                          className="gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Xoá
+                        </Button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -771,6 +786,8 @@ function RoomsTab() {
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function RoomManagementPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('room-types');
 
   return (
@@ -804,7 +821,7 @@ export default function RoomManagementPage() {
         </div>
       </div>
 
-      {activeTab === 'room-types' ? <RoomTypesTab /> : <RoomsTab />}
+      {activeTab === 'room-types' ? <RoomTypesTab isAdmin={isAdmin} /> : <RoomsTab isAdmin={isAdmin} />}
     </div>
   );
 }
