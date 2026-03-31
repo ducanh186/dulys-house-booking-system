@@ -163,7 +163,7 @@ export default function HomestayManagementPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { user } = useAuth();
   const { showToast } = useToast();
-  const isAdmin = ['admin', 'owner'].includes(user?.role);
+  const isAdmin = user?.role === 'admin';
 
   const fetchHomestays = useCallback(() => {
     setLoading(true);

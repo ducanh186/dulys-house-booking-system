@@ -137,6 +137,7 @@ function RoomTypeForm({ initial, homestays, onSubmit, onCancel, submitting }) {
             required
             type="number"
             min={1}
+            max={4}
             value={form.max_guests}
             onChange={(e) => set('max_guests', e.target.value)}
             placeholder="2"
@@ -843,7 +844,7 @@ function RoomsTab({ isAdmin }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function RoomManagementPage() {
   const { user } = useAuth();
-  const isAdmin = ['admin', 'owner'].includes(user?.role);
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('room-types');
 
   return (
