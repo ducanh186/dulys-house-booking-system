@@ -19,7 +19,7 @@ class StoreRoomTypeRequest extends FormRequest
             'description' => 'nullable|string',
             'hourly_rate' => 'nullable|numeric|min:0',
             'nightly_rate' => 'required|numeric|min:0',
-            'max_guests' => 'required|integer|min:1|max:20',
+            'max_guests' => 'required|integer|min:1|max:4',
             'is_active' => 'nullable|boolean',
         ];
     }
