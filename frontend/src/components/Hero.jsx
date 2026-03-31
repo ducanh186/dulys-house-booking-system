@@ -53,6 +53,7 @@ export function Hero() {
                 placeholder="Nhập số khách"
                 type="number"
                 min="1"
+                max="4"
                 value={guests}
                 onChange={(e) => setGuests(e.target.value)}
               />
