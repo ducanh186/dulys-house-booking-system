@@ -71,7 +71,13 @@ class BookingController extends Controller
             return $this->paginated($bookings, data: BookingResource::collection($bookings->getCollection()));
         }
 
-        $bookings = Booking::where('customer_id', $customer->id)
+        $query = Booking::where('customer_id', $customer->id);
+
+        if ($request->filled('booking_id')) {
+            $query->whereKey($request->query('booking_id'));
+        }
+
+        $bookings = $query
             ->with('details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments', 'customer', 'review')
             ->orderByDesc('created_at')
             ->paginate(10);

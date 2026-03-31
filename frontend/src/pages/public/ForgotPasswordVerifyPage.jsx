@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { resendPasswordReset, verifyPasswordReset } from '../../api/auth';
 import { Button } from '../../components/ui/Button';
@@ -9,11 +9,19 @@ import { useAuth } from '../../hooks/useAuth';
 import { isElevatedRole } from '../../contexts/AuthContext';
 
 const RESEND_SECONDS = 60;
+const SUCCESS_MESSAGE =
+  "A new verification code has been sent. Please check your inbox.";
 
 export default function ForgotPasswordVerifyPage() {
   const { loading, user, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const emailRef = useRef(null);
+  const otpRef = useRef(null);
+  const passwordRef = useRef(null);
+  const passwordConfirmationRef = useRef(null);
+  const firstErrorRef = useRef(null);
+
   const [email, setEmail] = useState(location.state?.email || '');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +44,14 @@ export default function ForgotPasswordVerifyPage() {
     return () => window.clearInterval(timer);
   }, [secondsLeft]);
 
+  useEffect(() => {
+    if (!firstErrorRef.current) return;
+    window.requestAnimationFrame(() => {
+      firstErrorRef.current?.focus?.();
+      firstErrorRef.current = null;
+    });
+  }, [fieldErrors, error]);
+
   if (loading) {
     return <LoadingSpinner fullScreen />;
   }
@@ -44,12 +60,59 @@ export default function ForgotPasswordVerifyPage() {
     return <Navigate to="/admin" replace />;
   }
 
+  function setFocusForField(field) {
+    const map = {
+      email: emailRef,
+      otp: otpRef,
+      password: passwordRef,
+      password_confirmation: passwordConfirmationRef,
+    };
+    firstErrorRef.current = map[field]?.current || null;
+  }
+
+  function buildLocalErrors() {
+    const errors = {};
+    const required = (value) => !String(value || '').trim();
+
+    if (required(email)) errors.email = ['Email is required.'];
+    if (required(otp)) errors.otp = ['Verification code is required.'];
+    if (required(password)) errors.password = ['New password is required.'];
+    if (required(passwordConfirmation)) {
+      errors.password_confirmation = ['Confirm password is required.'];
+    }
+
+    if (!errors.password && !errors.password_confirmation && password !== passwordConfirmation) {
+      errors.password = ['Mật khẩu mới và xác thực mật khẩu phải trùng khớp.'];
+      errors.password_confirmation = ['Mật khẩu mới và xác thực mật khẩu phải trùng khớp.'];
+    }
+
+    return errors;
+  }
+
+  function focusFirstError(errors) {
+    const priority = ['email', 'otp', 'password', 'password_confirmation'];
+    for (const field of priority) {
+      if (errors[field]) {
+        setFocusForField(field);
+        return;
+      }
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoadingSubmit(true);
     setError('');
     setMessage('');
     setFieldErrors({});
+
+    const localErrors = buildLocalErrors();
+    if (Object.keys(localErrors).length > 0) {
+      setFieldErrors(localErrors);
+      focusFirstError(localErrors);
+      setLoadingSubmit(false);
+      return;
+    }
 
     try {
       const res = await verifyPasswordReset({
@@ -66,8 +129,9 @@ export default function ForgotPasswordVerifyPage() {
     } catch (err) {
       if (err?.errors) {
         setFieldErrors(err.errors);
+        focusFirstError(err.errors);
       } else {
-        setError(err?.message || 'OTP không hợp lệ hoặc đã hết hạn.');
+        setError(err?.message || 'Mã xác minh không hợp lệ hoặc đã hết hạn.');
       }
     } finally {
       setLoadingSubmit(false);
@@ -83,13 +147,14 @@ export default function ForgotPasswordVerifyPage() {
 
     try {
       const res = await resendPasswordReset(email);
-      setMessage(res?.message || 'Đã gửi lại mã OTP.');
+      setMessage(res?.message || SUCCESS_MESSAGE);
       setSecondsLeft(RESEND_SECONDS);
     } catch (err) {
       if (err?.errors) {
         setFieldErrors(err.errors);
+        focusFirstError(err.errors);
       } else {
-        setError(err?.message || 'Không thể gửi lại mã OTP.');
+        setError(err?.message || 'Không thể gửi lại mã xác minh.');
       }
     } finally {
       setLoadingResend(false);
@@ -103,14 +168,11 @@ export default function ForgotPasswordVerifyPage() {
 
       <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center justify-center">
         <div className="w-full space-y-6">
-          {/* Logo */}
           <div className="flex justify-center">
             <img src="/logo.png" alt="Duly's House" className="h-12 w-auto" />
           </div>
 
-          {/* Card */}
           <div className="rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_20px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-8">
-            {/* Back link */}
             <Link
               to="/forgot-password"
               className="inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-on-surface transition-colors mb-4"
@@ -123,7 +185,7 @@ export default function ForgotPasswordVerifyPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-primary/70">Xác minh OTP</p>
               <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">Nhập mã 6 chữ số</h1>
               <p className="mt-3 text-sm leading-6 text-on-surface-variant">
-                Mã được gửi đến email của bạn. Sau khi đổi mật khẩu, bạn sẽ quay lại màn đăng nhập.
+                Mã xác minh được gửi đến email của bạn và có hiệu lực trong 5 phút.
               </p>
             </div>
 
@@ -133,30 +195,43 @@ export default function ForgotPasswordVerifyPage() {
             <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
               <div className="space-y-2">
                 <label htmlFor="reset-email" className="text-sm font-semibold text-on-surface">
-                  Email
+                  Email *
                 </label>
                 <Input
+                  ref={emailRef}
                   id="reset-email"
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) {
+                      setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }
+                  }}
                   disabled={loadingSubmit || loadingResend}
+                  className={fieldErrors.email ? 'ring-2 ring-red-400' : ''}
                 />
                 {fieldErrors.email?.[0] && <p className="text-xs text-red-500">{fieldErrors.email[0]}</p>}
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="otp" className="text-sm font-semibold text-on-surface">
-                  Mã OTP
+                  Mã xác minh *
                 </label>
                 <Input
+                  ref={otpRef}
                   id="otp"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   placeholder="123456"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\s+/g, '').slice(0, 6))}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\s+/g, '').slice(0, 6));
+                    if (fieldErrors.otp) {
+                      setFieldErrors((prev) => ({ ...prev, otp: undefined }));
+                    }
+                  }}
                   disabled={loadingSubmit || loadingResend}
                   className={fieldErrors.otp ? 'ring-2 ring-red-400' : ''}
                 />
@@ -165,13 +240,19 @@ export default function ForgotPasswordVerifyPage() {
 
               <div className="space-y-2">
                 <label htmlFor="new-password" className="text-sm font-semibold text-on-surface">
-                  Mật khẩu mới
+                  Mật khẩu mới *
                 </label>
                 <PasswordInput
+                  ref={passwordRef}
                   id="new-password"
                   placeholder="Tối thiểu 8 ký tự"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) {
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }
+                  }}
                   disabled={loadingSubmit || loadingResend}
                   className={fieldErrors.password ? 'ring-2 ring-red-400' : ''}
                 />
@@ -180,13 +261,19 @@ export default function ForgotPasswordVerifyPage() {
 
               <div className="space-y-2">
                 <label htmlFor="confirm-password" className="text-sm font-semibold text-on-surface">
-                  Xác nhận mật khẩu mới
+                  Xác nhận mật khẩu mới *
                 </label>
                 <PasswordInput
+                  ref={passwordConfirmationRef}
                   id="confirm-password"
                   placeholder="Nhập lại mật khẩu mới"
                   value={passwordConfirmation}
-                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  onChange={(e) => {
+                    setPasswordConfirmation(e.target.value);
+                    if (fieldErrors.password_confirmation) {
+                      setFieldErrors((prev) => ({ ...prev, password_confirmation: undefined }));
+                    }
+                  }}
                   disabled={loadingSubmit || loadingResend}
                   className={fieldErrors.password_confirmation ? 'ring-2 ring-red-400' : ''}
                 />
@@ -198,12 +285,11 @@ export default function ForgotPasswordVerifyPage() {
               <Button
                 type="submit"
                 className="w-full py-4 text-base"
-                disabled={loadingSubmit || !email || !otp || !password || !passwordConfirmation}
+                disabled={loadingSubmit || loadingResend}
               >
                 {loadingSubmit ? 'Đang xác minh...' : 'Đổi mật khẩu'}
               </Button>
 
-              {/* Resend link */}
               <div className="text-center">
                 {loadingResend ? (
                   <span className="text-sm text-on-surface-variant">Đang gửi lại...</span>
@@ -229,13 +315,10 @@ export default function ForgotPasswordVerifyPage() {
             </form>
           </div>
 
-          {/* Step indicators */}
           <div className="flex items-center justify-center gap-3">
-            <StepDot active={false} label="1" />
+            <StepDot active label="1" />
             <div className="h-px w-8 bg-primary/30" />
-            <StepDot active={true} label="2" />
-            <div className="h-px w-8 bg-border" />
-            <StepDot active={false} label="3" />
+            <StepDot active={false} label="2" />
           </div>
         </div>
       </div>
@@ -247,9 +330,7 @@ function StepDot({ active, label }) {
   return (
     <div
       className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-        active
-          ? 'sunlight-gradient text-white'
-          : 'border border-border bg-white/70 text-on-surface-variant'
+        active ? 'sunlight-gradient text-white' : 'border border-border bg-white/70 text-on-surface-variant'
       }`}
     >
       {label}

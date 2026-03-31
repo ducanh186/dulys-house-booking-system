@@ -15,6 +15,7 @@ return new class extends Migration
             $table->date('date_to');
             $table->decimal('override_price', 12, 2);
             $table->string('reason')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

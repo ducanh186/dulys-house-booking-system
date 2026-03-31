@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Services\BookingExpiryService;
 use App\Services\BookingService;
 use App\Traits\ApiResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,30 +26,20 @@ class AdminBookingController extends Controller
         $this->bookingExpiry->expirePendingBookings();
 
         $query = Booking::with('customer', 'details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments');
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('from')) {
-            $query->whereDate('check_in', '>=', $request->from);
-        }
-
-        if ($request->has('to')) {
-            $query->whereDate('check_out', '<=', $request->to);
-        }
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('booking_code', 'like', "%{$search}%")
-                    ->orWhereHas('customer', fn ($cq) => $cq->where('full_name', 'like', "%{$search}%"));
-            });
-        }
+        $this->applyFilters($query, $request);
+        $statusCounts = $this->statusCounts(clone $query);
 
         $bookings = $query->orderByDesc('created_at')->paginate(15);
 
-        return $this->paginated($bookings, data: BookingResource::collection($bookings->getCollection()));
+        return $this->paginated(
+            $bookings,
+            data: BookingResource::collection($bookings->getCollection()),
+            meta: [
+                'summary' => [
+                    'status_counts' => $statusCounts,
+                ],
+            ],
+        );
     }
 
     public function show(Booking $booking): JsonResponse
@@ -105,5 +96,52 @@ class AdminBookingController extends Controller
         } catch (\RuntimeException $e) {
             return $this->error($e->getMessage(), 422);
         }
+    }
+
+    protected function applyFilters(Builder $query, Request $request): void
+    {
+        if ($request->filled('booking_id')) {
+            $query->whereKey($request->query('booking_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('check_in', '>=', $request->query('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('check_out', '<=', $request->query('to'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('booking_code', 'like', "%{$search}%")
+                    ->orWhereHas('customer', fn ($cq) => $cq->where('full_name', 'like', "%{$search}%"));
+            });
+        }
+    }
+
+    protected function statusCounts(Builder $query): array
+    {
+        $defaults = [
+            'pending' => 0,
+            'confirmed' => 0,
+            'checked_in' => 0,
+            'checked_out' => 0,
+            'cancelled' => 0,
+            'failed' => 0,
+        ];
+
+        $counts = $query
+            ->get(['status'])
+            ->groupBy('status')
+            ->map(fn ($items) => $items->count())
+            ->all();
+
+        return array_merge($defaults, $counts);
     }
 }

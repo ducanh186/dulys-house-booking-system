@@ -16,7 +16,7 @@ class CreateBookingRequest extends FormRequest
         return [
             'check_in' => 'required|date|after_or_equal:today',
             'check_out' => 'required|date|after:check_in',
-            'guest_count' => 'required|integer|min:1',
+            'guest_count' => 'required|integer|min:1|max:4',
             'notes' => 'nullable|string|max:1000',
             'payment_method' => 'nullable|in:cash,transfer,card',
 

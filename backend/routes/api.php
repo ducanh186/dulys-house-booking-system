@@ -73,11 +73,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Read endpoints (all admin roles)
         Route::get('/homestays', [AdminHomestayController::class, 'index']);
-        Route::get('/homestays/{homestay}', [AdminHomestayController::class, 'show']);
+        Route::get('/homestays/{homestay}', [AdminHomestayController::class, 'show'])->withTrashed();
         Route::get('/room-types', [AdminRoomTypeController::class, 'index']);
-        Route::get('/room-types/{roomType}', [AdminRoomTypeController::class, 'show']);
+        Route::get('/room-types/{roomType}', [AdminRoomTypeController::class, 'show'])->withTrashed();
         Route::get('/rooms', [AdminRoomController::class, 'index']);
-        Route::get('/rooms/{room}', [AdminRoomController::class, 'show']);
+        Route::get('/rooms/{room}', [AdminRoomController::class, 'show'])->withTrashed();
 
         // Booking management (read + lifecycle actions for all)
         Route::get('/bookings', [AdminBookingController::class, 'index']);
@@ -109,21 +109,24 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ─── Admin-only write operations ──────────────────────
-    Route::middleware(['role:admin', 'throttle:60,1'])->prefix('admin')->group(function () {
+    Route::middleware(['role:admin,owner', 'throttle:60,1'])->prefix('admin')->group(function () {
         // Homestays CUD (create, update, delete)
         Route::post('/homestays', [AdminHomestayController::class, 'store']);
         Route::put('/homestays/{homestay}', [AdminHomestayController::class, 'update']);
         Route::delete('/homestays/{homestay}', [AdminHomestayController::class, 'destroy']);
+        Route::patch('/homestays/{homestay}/restore', [AdminHomestayController::class, 'restore'])->withTrashed();
 
         // Room Types CUD
         Route::post('/room-types', [AdminRoomTypeController::class, 'store']);
         Route::put('/room-types/{roomType}', [AdminRoomTypeController::class, 'update']);
         Route::delete('/room-types/{roomType}', [AdminRoomTypeController::class, 'destroy']);
+        Route::patch('/room-types/{roomType}/restore', [AdminRoomTypeController::class, 'restore'])->withTrashed();
 
         // Rooms CUD
         Route::post('/rooms', [AdminRoomController::class, 'store']);
         Route::put('/rooms/{room}', [AdminRoomController::class, 'update']);
         Route::delete('/rooms/{room}', [AdminRoomController::class, 'destroy']);
+        Route::patch('/rooms/{room}/restore', [AdminRoomController::class, 'restore'])->withTrashed();
         Route::patch('/rooms/{room}/status', [AdminRoomController::class, 'updateStatus']);
 
         // Availability (write)

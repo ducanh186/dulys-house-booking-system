@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 class PasswordResetOtpService
 {
-    public const OTP_EXPIRY_MINUTES = 10;
+    public const OTP_EXPIRY_MINUTES = 5;
 
     public const RESEND_THROTTLE_SECONDS = 60;
 

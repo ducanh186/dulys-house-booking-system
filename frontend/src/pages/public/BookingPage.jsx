@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, BedDouble, AlertCircle, ChevronLeft, Shield, Headphones, CreditCard, Landmark, Wallet } from 'lucide-react';
 import { createBooking } from '../../api/bookings';
@@ -35,7 +35,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const state = location.state?.bookingIntent || location.state || {};
+  const state = useMemo(() => location.state?.bookingIntent || location.state || {}, [location.state]);
 
   useEffect(() => {
     if (!state?.homestayId || !state?.roomTypeId) {
@@ -44,7 +44,6 @@ export default function BookingPage() {
   }, [state, navigate]);
 
   const {
-    homestayId = '',
     homestayName = '',
     roomTypeId = '',
     roomTypeName = '',
@@ -53,6 +52,7 @@ export default function BookingPage() {
     checkOut = '',
     nightlyRate = 0,
     quantity = 1,
+    guestCount: bookingGuestCount = 1,
   } = state || {};
 
   const nights = calculateNights(checkIn, checkOut);
@@ -65,10 +65,16 @@ export default function BookingPage() {
     customer_email: user?.email || '',
     notes: '',
   });
+  const [guestCount, setGuestCount] = useState(String(Math.min(4, Math.max(1, Number(bookingGuestCount || 1)))));
   const [paymentMethod, setPaymentMethod] = useState(state?.paymentMethod || 'transfer');
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
+  const customerNameRef = useRef(null);
+  const customerPhoneRef = useRef(null);
+  const customerEmailRef = useRef(null);
+  const guestCountRef = useRef(null);
+  const paymentMethodRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -89,6 +95,35 @@ export default function BookingPage() {
     }
   }
 
+  function handleGuestCountChange(e) {
+    const value = e.target.value;
+    if (value === '' || (Number(value) >= 1 && Number(value) <= 4)) {
+      setGuestCount(value);
+      if (formErrors.guest_count) {
+        setFormErrors((prev) => ({ ...prev, guest_count: null }));
+      }
+    }
+  }
+
+  function focusFirstInvalidField(errors) {
+    const order = [
+      ['customer_name', customerNameRef],
+      ['customer_phone', customerPhoneRef],
+      ['customer_email', customerEmailRef],
+      ['guest_count', guestCountRef],
+      ['paymentMethod', paymentMethodRef],
+    ];
+
+    for (const [key, ref] of order) {
+      if (errors[key]) {
+        window.requestAnimationFrame(() => {
+          ref.current?.focus?.();
+        });
+        return;
+      }
+    }
+  }
+
   function validate() {
     const errors = {};
     if (!form.customer_name.trim()) errors.customer_name = 'Vui lòng nhập họ tên.';
@@ -97,6 +132,9 @@ export default function BookingPage() {
       errors.customer_email = 'Vui lòng nhập email.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) {
       errors.customer_email = 'Email không hợp lệ.';
+    }
+    if (!guestCount || Number(guestCount) < 1 || Number(guestCount) > 4) {
+      errors.guest_count = 'Vui lòng nhập số khách từ 1 đến 4.';
     }
     if (!paymentMethod) {
       errors.paymentMethod = 'Vui lòng chọn phương thức thanh toán.';
@@ -111,6 +149,7 @@ export default function BookingPage() {
     const errors = validate();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      focusFirstInvalidField(errors);
       return;
     }
 
@@ -119,7 +158,7 @@ export default function BookingPage() {
       const payload = {
         check_in: checkIn,
         check_out: checkOut,
-        guest_count: Math.max(quantity * 2, quantity),
+        guest_count: Number(guestCount),
         payment_method: paymentMethod,
         rooms: [{ room_type_id: roomTypeId, quantity }],
         customer_name: form.customer_name.trim(),
@@ -200,6 +239,7 @@ export default function BookingPage() {
                       onChange={handleChange}
                       placeholder="Nguyen Van A"
                       error={formErrors.customer_name}
+                      inputRef={customerNameRef}
                       required
                     />
                     <Field
@@ -210,9 +250,25 @@ export default function BookingPage() {
                       onChange={handleChange}
                       placeholder="0901234567"
                       error={formErrors.customer_phone}
+                      inputRef={customerPhoneRef}
                       required
                     />
                   </div>
+
+                  <Field
+                    label="Số khách"
+                    name="guest_count"
+                    type="number"
+                    value={guestCount}
+                    onChange={handleGuestCountChange}
+                    placeholder="1"
+                    error={formErrors.guest_count}
+                    inputRef={guestCountRef}
+                    required
+                    min="1"
+                    max="4"
+                    inputMode="numeric"
+                  />
 
                   <Field
                     label="Email"
@@ -222,6 +278,7 @@ export default function BookingPage() {
                     onChange={handleChange}
                     placeholder="email@example.com"
                     error={formErrors.customer_email}
+                    inputRef={customerEmailRef}
                     required
                   />
 
@@ -254,6 +311,7 @@ export default function BookingPage() {
                   return (
                     <button
                       key={option.value}
+                      ref={option.value === PAYMENT_OPTIONS[0].value ? paymentMethodRef : undefined}
                       type="button"
                       onClick={() => setPaymentMethod(option.value)}
                       className={cn(
@@ -394,14 +452,14 @@ function StepIndicator({ number, label, active }) {
   );
 }
 
-function Field({ label, error, required = false, ...props }) {
+function Field({ label, error, required = false, inputRef, ...props }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-sm font-medium text-on-surface">
         {label}
         {required && <span className="text-error ml-0.5">*</span>}
       </label>
-      <Input {...props} className={error ? 'border-error' : ''} />
+      <Input ref={inputRef} {...props} className={error ? 'border-error' : ''} />
       {error && <p className="text-xs text-error">{error}</p>}
     </div>
   );

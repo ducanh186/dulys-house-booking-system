@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RotateCcw } from 'lucide-react';
 import {
   getRoomTypes,
   createRoomType,
   updateRoomType,
   deleteRoomType,
+  restoreRoomType,
   getRooms,
   createRoom,
   updateRoom,
   deleteRoom,
+  restoreRoom,
   updateRoomStatus,
   getAdminHomestays,
 } from '../../api/admin';
@@ -51,6 +53,10 @@ function roomStatusLabel(status) {
 
 function cleanlinessLabel(val) {
   return CLEANLINESS_OPTIONS.find((o) => o.value === val)?.label || val;
+}
+
+function isSuspended(item) {
+  return !!item?.is_suspended || !!item?.deleted_at;
 }
 
 // ─── RoomType Form ─────────────────────────────────────────────────────────────
@@ -314,12 +320,12 @@ function RoomTypesTab({ isAdmin }) {
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const { addToast } = useToast();
+  const { showToast } = useToast();
 
   const fetch = useCallback(() => {
     setLoading(true);
     setError(null);
-    getRoomTypes(page)
+    getRoomTypes(page, { include_suspended: 1 })
       .then((res) => {
         setRoomTypes(res.data || []);
         setMeta(res.meta || null);
@@ -333,7 +339,7 @@ function RoomTypesTab({ isAdmin }) {
   }, [fetch]);
 
   useEffect(() => {
-    getAdminHomestays(1)
+    getAdminHomestays(1, { include_suspended: 1 })
       .then((res) => setHomestays(res.data || []))
       .catch(() => {});
   }, []);
@@ -381,9 +387,18 @@ function RoomTypesTab({ isAdmin }) {
       setDeleteDialog({ open: false, item: null });
       fetch();
     } catch {
-      addToast('Không thể xoá loại phòng này.', 'error');
+      showToast('Không thể đình chỉ loại phòng này.', 'error');
     } finally {
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleRestore(id) {
+    try {
+      await restoreRoomType(id);
+      fetch();
+    } catch {
+      showToast('Không thể khôi phục loại phòng này.', 'error');
     }
   }
 
@@ -465,9 +480,14 @@ function RoomTypesTab({ isAdmin }) {
               {roomTypes.map((rt) => (
                 <tr
                   key={rt.id}
-                  className="border-b border-border hover:bg-surface-container transition-colors"
+                  className={`border-b border-border transition-colors ${isSuspended(rt) ? 'bg-amber-50/60 hover:bg-amber-50' : 'hover:bg-surface-container'}`}
                 >
-                  <td className="px-4 py-3 font-medium text-on-surface font-body">{rt.name}</td>
+                  <td className="px-4 py-3 font-medium text-on-surface font-body">
+                    <div className="flex items-center gap-2">
+                      <span>{rt.name}</span>
+                      {isSuspended(rt) && <Badge className="bg-amber-100 text-amber-800 border-amber-200">Đình chỉ</Badge>}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-on-surface-variant font-body">
                     {rt.homestay?.name ?? '—'}
                   </td>
@@ -484,15 +504,27 @@ function RoomTypesTab({ isAdmin }) {
                           <Pencil className="w-3.5 h-3.5" />
                           Sửa
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteDialog({ open: true, item: rt })}
-                          className="gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Xoá
-                        </Button>
+                        {isSuspended(rt) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRestore(rt.id)}
+                            className="gap-1"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Khôi phục
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeleteDialog({ open: true, item: rt })}
+                            className="gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Đình chỉ
+                          </Button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -509,9 +541,9 @@ function RoomTypesTab({ isAdmin }) {
 
       <ConfirmDialog
         open={deleteDialog.open}
-        title="Xoá loại phòng"
-        message={`Bạn có chắc chắn muốn xoá loại phòng "${deleteDialog.item?.name}"?`}
-        confirmLabel={deleteLoading ? 'Đang xoá...' : 'Xoá'}
+        title="Đình chỉ loại phòng"
+        message={`Bạn có chắc chắn muốn đình chỉ loại phòng "${deleteDialog.item?.name}"? Bạn có thể khôi phục lại sau.`}
+        confirmLabel={deleteLoading ? 'Đang đình chỉ...' : 'Đình chỉ'}
         destructive
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ open: false, item: null })}
@@ -537,12 +569,12 @@ function RoomsTab({ isAdmin }) {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(null);
-  const { addToast } = useToast();
+  const { showToast } = useToast();
 
   const fetch = useCallback(() => {
     setLoading(true);
     setError(null);
-    getRooms(page)
+    getRooms(page, { include_suspended: 1 })
       .then((res) => {
         setRooms(res.data || []);
         setMeta(res.meta || null);
@@ -556,7 +588,7 @@ function RoomsTab({ isAdmin }) {
   }, [fetch]);
 
   useEffect(() => {
-    getRoomTypes(1)
+    getRoomTypes(1, { include_suspended: 1 })
       .then((res) => setRoomTypes(res.data || []))
       .catch(() => {});
   }, []);
@@ -604,9 +636,18 @@ function RoomsTab({ isAdmin }) {
       setDeleteDialog({ open: false, item: null });
       fetch();
     } catch {
-      addToast('Không thể xoá phòng này.', 'error');
+      showToast('Không thể đình chỉ phòng này.', 'error');
     } finally {
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleRestore(id) {
+    try {
+      await restoreRoom(id);
+      fetch();
+    } catch {
+      showToast('Không thể khôi phục phòng này.', 'error');
     }
   }
 
@@ -618,7 +659,7 @@ function RoomsTab({ isAdmin }) {
         prev.map((r) => (r.id === id ? { ...r, status } : r))
       );
     } catch {
-      addToast('Không thể cập nhật trạng thái phòng.', 'error');
+      showToast('Không thể cập nhật trạng thái phòng.', 'error');
     } finally {
       setStatusLoading(null);
     }
@@ -705,10 +746,13 @@ function RoomsTab({ isAdmin }) {
               {rooms.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-border hover:bg-surface-container transition-colors"
+                  className={`border-b border-border transition-colors ${isSuspended(r) ? 'bg-amber-50/60 hover:bg-amber-50' : 'hover:bg-surface-container'}`}
                 >
                   <td className="px-4 py-3 font-semibold text-on-surface font-mono">
-                    {r.room_code}
+                    <div className="flex items-center gap-2">
+                      <span>{r.room_code}</span>
+                      {isSuspended(r) && <Badge className="bg-amber-100 text-amber-800 border-amber-200">Đình chỉ</Badge>}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-on-surface font-body">
                     {r.room_type?.name ?? '—'}
@@ -748,15 +792,27 @@ function RoomsTab({ isAdmin }) {
                           <Pencil className="w-3.5 h-3.5" />
                           Sửa
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteDialog({ open: true, item: r })}
-                          className="gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Xoá
-                        </Button>
+                        {isSuspended(r) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRestore(r.id)}
+                            className="gap-1"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Khôi phục
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeleteDialog({ open: true, item: r })}
+                            className="gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Đình chỉ
+                          </Button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -773,9 +829,9 @@ function RoomsTab({ isAdmin }) {
 
       <ConfirmDialog
         open={deleteDialog.open}
-        title="Xoá phòng"
-        message={`Bạn có chắc chắn muốn xoá phòng "${deleteDialog.item?.room_code}"?`}
-        confirmLabel={deleteLoading ? 'Đang xoá...' : 'Xoá'}
+        title="Đình chỉ phòng"
+        message={`Bạn có chắc chắn muốn đình chỉ phòng "${deleteDialog.item?.room_code}"? Bạn có thể khôi phục lại sau.`}
+        confirmLabel={deleteLoading ? 'Đang đình chỉ...' : 'Đình chỉ'}
         destructive
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ open: false, item: null })}
@@ -787,7 +843,7 @@ function RoomsTab({ isAdmin }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function RoomManagementPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = ['admin', 'owner'].includes(user?.role);
   const [activeTab, setActiveTab] = useState('room-types');
 
   return (

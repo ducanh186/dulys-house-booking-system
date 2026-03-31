@@ -17,6 +17,8 @@ class RoomResource extends JsonResource
             'cleanliness' => $this->cleanliness,
             'notes' => $this->notes,
             'main_image' => $this->main_image,
+            'is_suspended' => $this->trashed(),
+            'deleted_at' => $this->deleted_at?->toISOString(),
             'room_type' => $this->whenLoaded('roomType', fn () => new RoomTypeResource($this->roomType)),
         ];
     }

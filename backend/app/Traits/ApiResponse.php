@@ -31,18 +31,18 @@ trait ApiResponse
         return response()->json($response, $code);
     }
 
-    protected function paginated(LengthAwarePaginator $paginator, string $message = 'Success', mixed $data = null): JsonResponse
+    protected function paginated(LengthAwarePaginator $paginator, string $message = 'Success', mixed $data = null, array $meta = []): JsonResponse
     {
         return response()->json([
             'success' => true,
             'message' => $message,
             'data' => $this->normalizeData($data ?? $paginator->items()),
-            'meta' => [
+            'meta' => array_merge([
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
-            ],
+            ], $meta),
         ]);
     }
 

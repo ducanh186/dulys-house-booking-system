@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CalendarDays,
   CheckCheck,
@@ -23,6 +24,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
+import { cn } from '../../lib/utils';
 
 const ACTION_LOADING_KEY = {
   confirm: 'confirm',
@@ -50,7 +52,6 @@ function formatDate(dateStr) {
 
 function SummaryCard({ icon, label, value, hint }) {
   const Icon = icon;
-  Icon;
 
   return (
     <Card className="admin-card">
@@ -70,14 +71,20 @@ function SummaryCard({ icon, label, value, hint }) {
   );
 }
 
-function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, loadingKey }) {
+function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, loadingKey, highlighted }) {
   const canConfirm = booking.status === 'pending';
   const canCheckIn = booking.status === 'confirmed';
   const canCheckOut = booking.status === 'checked_in';
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
 
   return (
-    <Card className="admin-card overflow-hidden">
+    <Card
+      id={`admin-booking-${booking.id}`}
+      className={cn(
+        'admin-card overflow-hidden',
+        highlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
+    >
       <CardContent className="p-0">
         <div className="border-b border-border/60 bg-surface-container-low px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -214,21 +221,28 @@ const STATUS_FILTERS = [
 export default function BookingManagementPage() {
   const [bookings, setBookings] = useState([]);
   const [meta, setMeta] = useState(null);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ open: false, bookingId: null });
-  const [statusFilter, setStatusFilter] = useState('');
+  const [serverSummary, setServerSummary] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get('page') || '1');
+  const statusFilter = searchParams.get('status') || '';
+  const bookingIdFilter = searchParams.get('booking_id') || '';
 
   async function fetchBookings() {
     setLoading(true);
     setError('');
     try {
-      const response = await getAdminBookings(page);
+      const response = await getAdminBookings(page, {
+        ...(statusFilter ? { status: statusFilter } : {}),
+        ...(bookingIdFilter ? { booking_id: bookingIdFilter } : {}),
+      });
       const payload = response?.data ?? response ?? {};
       setBookings(normalizeCollection(response));
       setMeta(payload.meta ?? null);
+      setServerSummary(payload.meta?.summary ?? payload.summary ?? null);
     } catch {
       setError('Không thể tải danh sách đặt phòng.');
     } finally {
@@ -239,7 +253,17 @@ export default function BookingManagementPage() {
   useEffect(() => {
     fetchBookings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, statusFilter, bookingIdFilter]);
+
+  useEffect(() => {
+    if (!bookingIdFilter || loading || error) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`admin-booking-${bookingIdFilter}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+  }, [bookingIdFilter, bookings, loading, error]);
 
   async function runAction(actionKey, bookingId, actionFn) {
     setActionLoading(`${bookingId}-${actionKey}`);
@@ -254,16 +278,42 @@ export default function BookingManagementPage() {
   }
 
   const summary = useMemo(() => {
-    const counts = { total: bookings.length, pending: 0, confirmed: 0, checked_in: 0, checked_out: 0, cancelled: 0 };
+    const fallback = { total: bookings.length, pending: 0, confirmed: 0, checked_in: 0, checked_out: 0, cancelled: 0 };
     for (const booking of bookings) {
-      if (counts[booking.status] != null) counts[booking.status] += 1;
+      if (fallback[booking.status] != null) fallback[booking.status] += 1;
     }
-    return counts;
-  }, [bookings]);
+    if (!serverSummary) return fallback;
+    const serverCounts = serverSummary.status_counts ?? serverSummary;
+    return {
+      ...fallback,
+      ...serverCounts,
+      total: serverSummary.total ?? fallback.total,
+    };
+  }, [bookings, serverSummary]);
 
-  const filteredBookings = statusFilter
-    ? bookings.filter((b) => b.status === statusFilter)
-    : bookings;
+  function updateQuery(nextValues) {
+    const params = new URLSearchParams(searchParams);
+    Object.entries(nextValues).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
+    });
+    setSearchParams(params);
+  }
+
+  function handleStatusFilterChange(nextStatus) {
+    updateQuery({
+      status: nextStatus || null,
+      page: 1,
+      booking_id: null,
+    });
+  }
+
+  function handlePageChange(nextPage) {
+    updateQuery({ page: nextPage });
+  }
 
   return (
     <div className="space-y-6">
@@ -295,14 +345,14 @@ export default function BookingManagementPage() {
               Danh sách đặt phòng
             </CardTitle>
             <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">
-              {statusFilter ? filteredBookings.length : summary.total} đơn
+              {meta?.total ?? bookings.length} đơn
             </Badge>
           </div>
           <div className="flex flex-wrap gap-2">
             {STATUS_FILTERS.map((sf) => (
               <button
                 key={sf.value}
-                onClick={() => setStatusFilter(sf.value)}
+                onClick={() => handleStatusFilterChange(statusFilter === sf.value ? '' : sf.value)}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                   statusFilter === sf.value
                     ? 'bg-primary text-white'
@@ -323,7 +373,7 @@ export default function BookingManagementPage() {
             <LoadingSpinner />
           ) : error ? (
             <p className="text-sm text-error">{error}</p>
-          ) : filteredBookings.length === 0 ? (
+          ) : bookings.length === 0 ? (
             <EmptyState
               icon={CalendarDays}
               title="Chưa có đặt phòng nào"
@@ -332,7 +382,7 @@ export default function BookingManagementPage() {
             />
           ) : (
             <div className="space-y-4">
-              {filteredBookings.map((booking) => (
+              {bookings.map((booking) => (
                 <BookingCard
                   key={booking.id}
                   booking={booking}
@@ -341,6 +391,7 @@ export default function BookingManagementPage() {
                   onCheckOut={(id) => runAction(ACTION_LOADING_KEY.checkout, id, checkOutBooking)}
                   onCancel={(id) => setConfirmDialog({ open: true, bookingId: id })}
                   loadingKey={actionLoading}
+                  highlighted={String(booking.id) === String(bookingIdFilter)}
                 />
               ))}
             </div>
@@ -348,7 +399,7 @@ export default function BookingManagementPage() {
 
           {!loading && !error && meta && (
             <div className="mt-5 border-t border-border/60 pt-4">
-              <Pagination meta={meta} onPageChange={setPage} />
+              <Pagination meta={meta} onPageChange={handlePageChange} />
             </div>
           )}
         </CardContent>

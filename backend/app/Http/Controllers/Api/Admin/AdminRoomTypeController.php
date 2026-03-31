@@ -16,10 +16,16 @@ class AdminRoomTypeController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = RoomType::with('homestay')->withCount('rooms');
+        $query = RoomType::query();
 
-        if ($request->has('homestay_id')) {
-            $query->where('homestay_id', $request->homestay_id);
+        if ($request->boolean('include_suspended')) {
+            $query->withTrashed();
+        }
+
+        $query->with('homestay')->withCount('rooms');
+
+        if ($request->filled('homestay_id')) {
+            $query->where('homestay_id', $request->query('homestay_id'));
         }
 
         $roomTypes = $query->orderByDesc('created_at')->paginate(15);
@@ -52,6 +58,13 @@ class AdminRoomTypeController extends Controller
     {
         $roomType->delete();
 
-        return $this->success(null, 'Xóa loại phòng thành công.');
+        return $this->success(null, 'Đình chỉ loại phòng thành công.');
+    }
+
+    public function restore(RoomType $roomType): JsonResponse
+    {
+        $roomType->restore();
+
+        return $this->success(new RoomTypeResource($roomType->fresh('homestay')), 'Khôi phục loại phòng thành công.');
     }
 }

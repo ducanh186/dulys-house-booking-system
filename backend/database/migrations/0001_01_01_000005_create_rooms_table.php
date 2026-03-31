@@ -16,6 +16,7 @@ return new class extends Migration
             $table->enum('cleanliness', ['clean', 'dirty', 'cleaning'])->default('clean');
             $table->text('notes')->nullable();
             $table->string('main_image')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

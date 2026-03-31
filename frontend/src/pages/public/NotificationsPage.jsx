@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../api/notifications';
+import { useAuth } from '../../hooks/useAuth';
+import { getNotificationTarget } from '../../lib/notificationRouting';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
 import { Button } from '../../components/ui/Button';
@@ -15,25 +18,62 @@ function timeAgo(dateStr) {
 }
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
-  const fetch = useCallback((p) => {
-    setLoading(true);
-    getNotifications(p).then(r => { setNotifications(r.data || []); setMeta(r.meta || null); }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  useEffect(() => {
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      setLoading(true);
+      try {
+        const response = await getNotifications(page);
+        if (active) {
+          setNotifications(response.data || []);
+          setMeta(response.meta || null);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }, 0);
 
-  useEffect(() => { fetch(page); }, [fetch, page]);
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [page]);
 
   const markRead = async (n) => {
-    if (n.read_at) return;
-    try { await markNotificationRead(n.id); setNotifications(prev => prev.map(i => i.id === n.id ? { ...i, read_at: new Date().toISOString() } : i)); } catch {}
+    try {
+      await markNotificationRead(n.id);
+      setNotifications(prev => prev.map(i => i.id === n.id ? { ...i, read_at: new Date().toISOString() } : i));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    if (!n.read_at) {
+      await markRead(n);
+    }
+    const target = getNotificationTarget(n, user?.role);
+    if (target) navigate(target);
   };
 
   const markAll = async () => {
-    try { await markAllNotificationsRead(); setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))); } catch {}
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -50,7 +90,7 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map(n => (
-            <button key={n.id} onClick={() => markRead(n)} className={`w-full text-left rounded-2xl border border-border px-5 py-4 transition-colors hover:bg-surface-container ${!n.read_at ? 'bg-blue-50 border-blue-100' : 'bg-background'}`}>
+            <button key={n.id} onClick={() => handleNotificationClick(n)} className={`w-full text-left rounded-2xl border border-border px-5 py-4 transition-colors hover:bg-surface-container ${!n.read_at ? 'bg-blue-50 border-blue-100' : 'bg-background'}`}>
               <div className="flex justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm mb-1 ${!n.read_at ? 'font-semibold' : ''}`}>{n.title}</p>

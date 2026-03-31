@@ -8,8 +8,8 @@ export const getDashboardRevenue = (params) =>
   client.get('/admin/dashboard/revenue', { params });
 
 // Homestays CRUD
-export const getAdminHomestays = (page = 1) =>
-  client.get('/admin/homestays', { params: { page } });
+export const getAdminHomestays = (page = 1, params = {}) =>
+  client.get('/admin/homestays', { params: { page, ...params } });
 
 export const getAdminHomestay = (id) =>
   client.get(`/admin/homestays/${id}`);
@@ -23,9 +23,12 @@ export const updateHomestay = (id, data) =>
 export const deleteHomestay = (id) =>
   client.delete(`/admin/homestays/${id}`);
 
+export const restoreHomestay = (id) =>
+  client.patch(`/admin/homestays/${id}/restore`);
+
 // Room Types CRUD
-export const getRoomTypes = (page = 1) =>
-  client.get('/admin/room-types', { params: { page } });
+export const getRoomTypes = (page = 1, params = {}) =>
+  client.get('/admin/room-types', { params: { page, ...params } });
 
 export const getRoomType = (id) =>
   client.get(`/admin/room-types/${id}`);
@@ -39,9 +42,12 @@ export const updateRoomType = (id, data) =>
 export const deleteRoomType = (id) =>
   client.delete(`/admin/room-types/${id}`);
 
+export const restoreRoomType = (id) =>
+  client.patch(`/admin/room-types/${id}/restore`);
+
 // Rooms CRUD
-export const getRooms = (page = 1) =>
-  client.get('/admin/rooms', { params: { page } });
+export const getRooms = (page = 1, params = {}) =>
+  client.get('/admin/rooms', { params: { page, ...params } });
 
 export const getRoom = (id) =>
   client.get(`/admin/rooms/${id}`);
@@ -55,12 +61,15 @@ export const updateRoom = (id, data) =>
 export const deleteRoom = (id) =>
   client.delete(`/admin/rooms/${id}`);
 
+export const restoreRoom = (id) =>
+  client.patch(`/admin/rooms/${id}/restore`);
+
 export const updateRoomStatus = (id, status) =>
   client.patch(`/admin/rooms/${id}/status`, { status });
 
 // Bookings management
-export const getAdminBookings = (page = 1) =>
-  client.get('/admin/bookings', { params: { page } });
+export const getAdminBookings = (page = 1, params = {}) =>
+  client.get('/admin/bookings', { params: { page, ...params } });
 
 export const getAdminBooking = (id) =>
   client.get(`/admin/bookings/${id}`);

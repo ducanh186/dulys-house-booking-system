@@ -20,11 +20,13 @@ class SearchController extends Controller
 
     public function search(SearchAvailabilityRequest $request): JsonResponse
     {
+        $validated = $request->validated();
+
         $results = $this->availability->searchAvailable(
-            $request->homestay_id,
-            Carbon::parse($request->check_in),
-            Carbon::parse($request->check_out),
-            $request->integer('guests', 1),
+            $validated['homestay_id'] ?? null,
+            Carbon::parse($validated['check_in']),
+            Carbon::parse($validated['check_out']),
+            (int) ($validated['guests'] ?? 1),
         );
 
         return $this->success(SearchAvailabilityResource::collection($results), 'Kết quả tìm kiếm.');

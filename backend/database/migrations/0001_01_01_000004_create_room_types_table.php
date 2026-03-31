@@ -17,6 +17,7 @@ return new class extends Migration
             $table->decimal('nightly_rate', 12, 2);
             $table->integer('max_guests')->default(2);
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
     }

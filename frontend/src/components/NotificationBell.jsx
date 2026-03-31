@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount } from '../api/notifications';
+import { getNotificationTarget } from '../lib/notificationRouting';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -24,7 +25,9 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const fetch = () => getUnreadNotificationCount().then(r => setCount(r.data?.count ?? 0)).catch(() => {});
+    const fetch = () => getUnreadNotificationCount().then(r => setCount(r.data?.count ?? 0)).catch((error) => {
+      console.error(error);
+    });
     fetch();
     const id = setInterval(fetch, 30000);
     return () => clearInterval(id);
@@ -32,8 +35,29 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!open || !isAuthenticated) return;
-    setLoading(true);
-    getNotifications(1).then(r => setItems((r.data || []).slice(0, 10))).catch(() => {}).finally(() => setLoading(false));
+    let active = true;
+
+    async function loadNotifications() {
+      setLoading(true);
+      try {
+        const response = await getNotifications(1);
+        if (active) {
+          setItems((response.data || []).slice(0, 10));
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadNotifications();
+
+    return () => {
+      active = false;
+    };
   }, [open, isAuthenticated]);
 
   useEffect(() => {
@@ -45,25 +69,18 @@ export default function NotificationBell() {
   if (!isAuthenticated) return null;
 
   const handleNotificationClick = async (n) => {
-    // Mark as read if unread
     if (!n.read_at) {
       try {
         await markNotificationRead(n.id);
         setItems(prev => prev.map(i => i.id === n.id ? { ...i, read_at: new Date().toISOString() } : i));
         setCount(c => Math.max(0, c - 1));
-      } catch {}
-    }
-    // Navigate to the booking if metadata has booking_id
-    const bookingId = n.data?.booking_id || n.metadata?.booking_id;
-    if (bookingId) {
-      setOpen(false);
-      const isStaff = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'staff';
-      if (isStaff) {
-        navigate('/admin/bookings');
-      } else {
-        navigate('/my-bookings');
+      } catch (error) {
+        console.error(error);
       }
     }
+    const target = getNotificationTarget(n, user?.role);
+    setOpen(false);
+    if (target) navigate(target);
   };
 
   const markAll = async () => {
@@ -71,7 +88,9 @@ export default function NotificationBell() {
       await markAllNotificationsRead();
       setItems(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
       setCount(0);
-    } catch {}
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (

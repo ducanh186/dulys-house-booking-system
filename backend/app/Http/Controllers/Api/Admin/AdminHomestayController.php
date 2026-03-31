@@ -8,14 +8,21 @@ use App\Http\Resources\HomestayResource;
 use App\Models\Homestay;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AdminHomestayController extends Controller
 {
     use ApiResponse;
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $homestays = Homestay::withCount(['roomTypes', 'rooms'])
+        $query = Homestay::query();
+
+        if ($request->boolean('include_suspended')) {
+            $query->withTrashed();
+        }
+
+        $homestays = $query->withCount(['roomTypes', 'rooms'])
             ->orderByDesc('created_at')
             ->paginate(15);
 
@@ -47,6 +54,13 @@ class AdminHomestayController extends Controller
     {
         $homestay->delete();
 
-        return $this->success(null, 'Xóa cơ sở thành công.');
+        return $this->success(null, 'Đình chỉ cơ sở thành công.');
+    }
+
+    public function restore(Homestay $homestay): JsonResponse
+    {
+        $homestay->restore();
+
+        return $this->success(new HomestayResource($homestay->fresh()), 'Khôi phục cơ sở thành công.');
     }
 }

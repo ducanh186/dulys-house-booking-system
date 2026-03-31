@@ -1,16 +1,26 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { requestPasswordReset } from '../../api/auth';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
+const SUCCESS_MESSAGE =
+  "If the email is registered, we’ve sent a verification code to your inbox. Please check your email.";
+
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
+  const emailRef = useRef(null);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+
+  function focusEmail() {
+    window.requestAnimationFrame(() => {
+      emailRef.current?.focus?.();
+    });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -21,16 +31,19 @@ export default function ForgotPasswordPage() {
 
     try {
       const res = await requestPasswordReset(email);
-      setMessage(res?.message || 'Nếu email hợp lệ, bạn sẽ nhận được mã OTP trong ít phút.');
       navigate('/forgot-password/verify', {
         replace: true,
-        state: { email, message: res?.message },
+        state: {
+          email,
+          message: res?.message || SUCCESS_MESSAGE,
+        },
       });
     } catch (err) {
       if (err?.errors) {
         setFieldErrors(err.errors);
+        focusEmail();
       } else {
-        setError(err?.message || 'Không thể gửi mã OTP. Vui lòng thử lại.');
+        setError(err?.message || 'Không thể gửi mã xác minh. Vui lòng thử lại.');
       }
     } finally {
       setLoading(false);
@@ -44,18 +57,16 @@ export default function ForgotPasswordPage() {
 
       <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center justify-center">
         <div className="w-full space-y-6">
-          {/* Logo */}
           <div className="flex justify-center">
             <img src="/logo.png" alt="Duly's House" className="h-12 w-auto" />
           </div>
 
-          {/* Card */}
           <div className="rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_20px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-8">
             <div className="mb-6">
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-primary/70">Quên mật khẩu</p>
-              <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">Nhận mã OTP qua email</h1>
+              <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">Nhận mã xác minh qua email</h1>
               <p className="mt-3 text-sm leading-6 text-on-surface-variant">
-                Nhập email để nhận mã khôi phục 6 chữ số.
+                Nhập email đã đăng ký để nhận mã khôi phục 6 chữ số.
               </p>
             </div>
 
@@ -65,19 +76,25 @@ export default function ForgotPasswordPage() {
 
               <div className="space-y-2">
                 <label htmlFor="reset-email" className="text-sm font-semibold text-on-surface">
-                  Email
+                  Email *
                 </label>
                 <div className="relative">
                   <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-outline-variant">
                     <span className="material-symbols-outlined text-lg">mail</span>
                   </span>
                   <Input
+                    ref={emailRef}
                     id="reset-email"
                     type="email"
                     autoComplete="email"
                     placeholder="ban@dulyshouse.vn"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) {
+                        setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                      }
+                    }}
                     disabled={loading}
                     className={`pl-11 py-3.5 h-auto ${fieldErrors.email ? 'ring-2 ring-red-400' : ''}`}
                   />
@@ -85,8 +102,8 @@ export default function ForgotPasswordPage() {
                 {fieldErrors.email?.[0] && <p className="text-xs text-red-500">{fieldErrors.email[0]}</p>}
               </div>
 
-              <Button type="submit" className="w-full py-4 text-base" disabled={loading || !email}>
-                {loading ? 'Đang gửi OTP...' : 'Gửi mã OTP'}
+              <Button type="submit" className="w-full py-4 text-base" disabled={loading}>
+                {loading ? 'Đang gửi mã...' : 'Gửi mã xác minh'}
               </Button>
 
               <p className="text-center text-sm text-on-surface-variant">
@@ -98,11 +115,10 @@ export default function ForgotPasswordPage() {
             </form>
           </div>
 
-          {/* Security hints */}
           <div className="grid grid-cols-3 gap-3">
-            <SecurityHint icon="shield" text="OTP hạn dùng 10 phút" />
+            <SecurityHint icon="shield" text="OTP hạn dùng 5 phút" />
             <SecurityHint icon="visibility_off" text="Không lộ email" />
-            <SecurityHint icon="bolt" text="Đổi xong đăng nhập ngay" />
+            <SecurityHint icon="bolt" text="Resend bị khoá 60 giây" />
           </div>
         </div>
       </div>

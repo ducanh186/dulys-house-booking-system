@@ -14,6 +14,7 @@ return new class extends Migration
             $table->date('date_from');
             $table->date('date_to');
             $table->string('reason')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

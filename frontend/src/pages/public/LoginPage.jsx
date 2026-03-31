@@ -248,7 +248,7 @@ function AuthCard({
 
           <Field
             id="email"
-            label="Email hoặc tên đăng nhập"
+            label="Email hoặc tên đăng nhập *"
             icon="alternate_email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -264,7 +264,7 @@ function AuthCard({
 
           <div className="space-y-2">
             <label htmlFor="password" className={`text-sm font-semibold ${labelClassName}`}>
-              Mật khẩu
+              Mật khẩu *
             </label>
             <div className="relative">
               <span className={`pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-outline-variant ${helperClassName}`}>
@@ -284,6 +284,12 @@ function AuthCard({
             {fieldErrors.password?.[0] && (
               <p className="text-xs text-red-500">{fieldErrors.password[0]}</p>
             )}
+          </div>
+
+          <div className="flex justify-end">
+            <Link to="/forgot-password" className={`text-sm font-semibold hover:underline ${linkClassName}`}>
+              Quên mật khẩu?
+            </Link>
           </div>
 
           <Button

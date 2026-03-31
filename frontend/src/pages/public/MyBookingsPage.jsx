@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CalendarDays, AlertCircle, CheckCircle, User, Lock, Phone, Mail,
   Inbox, Settings, History, Headphones, LogOut, Plus, Star,
@@ -178,7 +178,9 @@ function ProfileSection({ user, bookingCount, onProfileSaved }) {
       if (onProfileSaved) {
         try {
           await onProfileSaved();
-        } catch {}
+        } catch (error) {
+          console.error(error);
+        }
       }
     } catch (err) {
       if (err.errors) {
@@ -437,9 +439,19 @@ function ProfileField({ id, label, icon: Icon, error, ...inputProps }) {
 
 // ─── Bookings Section ────────────────────────────────────
 
-function BookingsSection({ allBookings, loadingBookings, bookingsError, meta, onPageChange, onCancel }) {
+function BookingsSection({ allBookings, loadingBookings, bookingsError, meta, onPageChange, onCancel, highlightBookingId }) {
   const upcomingBookings = allBookings.filter((b) => UPCOMING_STATUSES.includes(b.status));
   const pastBookings = allBookings.filter((b) => PAST_STATUSES.includes(b.status));
+
+  useEffect(() => {
+    if (!highlightBookingId || loadingBookings || bookingsError) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`booking-${highlightBookingId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+  }, [highlightBookingId, loadingBookings, bookingsError, allBookings]);
 
   return (
     <div className="space-y-8">
@@ -476,7 +488,12 @@ function BookingsSection({ allBookings, loadingBookings, bookingsError, meta, on
             ) : (
               <div className="space-y-4">
                 {upcomingBookings.map((b) => (
-                  <UpcomingBookingCard key={b.id} booking={b} onCancel={onCancel} />
+                  <UpcomingBookingCard
+                    key={b.id}
+                    booking={b}
+                    onCancel={onCancel}
+                    highlighted={String(b.id) === String(highlightBookingId)}
+                  />
                 ))}
               </div>
             )}
@@ -490,7 +507,11 @@ function BookingsSection({ allBookings, loadingBookings, bookingsError, meta, on
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {pastBookings.map((b) => (
-                  <PastBookingCard key={b.id} booking={b} />
+                  <PastBookingCard
+                    key={b.id}
+                    booking={b}
+                    highlighted={String(b.id) === String(highlightBookingId)}
+                  />
                 ))}
               </div>
             )}
@@ -503,13 +524,19 @@ function BookingsSection({ allBookings, loadingBookings, bookingsError, meta, on
   );
 }
 
-function UpcomingBookingCard({ booking, onCancel }) {
+function UpcomingBookingCard({ booking, onCancel, highlighted }) {
   const canCancel = UPCOMING_STATUSES.includes(booking.status);
   const roomName = booking.details?.[0]?.room_type?.name || '';
   const homestayName = booking.homestay?.name || '';
 
   return (
-    <Card className="border-border overflow-hidden">
+    <Card
+      id={`booking-${booking.id}`}
+      className={cn(
+        'border-border overflow-hidden',
+        highlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
+    >
       <div className="flex flex-col sm:flex-row">
         {/* Image */}
         <div className="sm:w-56 h-44 sm:h-auto shrink-0 overflow-hidden">
@@ -560,13 +587,19 @@ function UpcomingBookingCard({ booking, onCancel }) {
   );
 }
 
-function PastBookingCard({ booking }) {
+function PastBookingCard({ booking, highlighted }) {
   const canReview = booking.status === 'checked_out' && !booking.review;
   const roomName = booking.details?.[0]?.room_type?.name || '';
   const homestayName = booking.homestay?.name || '';
 
   return (
-    <Card className="border-border overflow-hidden">
+    <Card
+      id={`booking-${booking.id}`}
+      className={cn(
+        'border-border overflow-hidden',
+        highlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
+    >
       {/* Image */}
       <div className="h-36 overflow-hidden relative">
         <ImagePlaceholder name={homestayName || roomName} className="h-full w-full" size="md" />
@@ -611,6 +644,8 @@ export default function MyBookingsPage() {
   const { user, logout, refreshUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingIdFilter = searchParams.get('booking_id') || '';
 
   const [allBookings, setAllBookings] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -624,7 +659,7 @@ export default function MyBookingsPage() {
   const fetchBookings = useCallback((page = 1) => {
     setLoadingBookings(true);
     setBookingsError('');
-    getMyBookings(page)
+    getMyBookings(page, bookingIdFilter ? { booking_id: bookingIdFilter } : {})
       .then((res) => {
         setAllBookings(res.data || []);
         setMeta(res.meta || null);
@@ -633,7 +668,7 @@ export default function MyBookingsPage() {
         setBookingsError(err.message || 'Không thể tải danh sách đặt phòng.');
       })
       .finally(() => setLoadingBookings(false));
-  }, []);
+  }, [bookingIdFilter]);
 
   useEffect(() => {
     fetchBookings(1);
@@ -724,6 +759,7 @@ export default function MyBookingsPage() {
                 meta={meta}
                 onPageChange={handlePageChange}
                 onCancel={handleCancelRequest}
+                highlightBookingId={bookingIdFilter}
               />
             )}
           </div>

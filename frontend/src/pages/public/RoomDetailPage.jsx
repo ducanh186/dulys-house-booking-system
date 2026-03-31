@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, CalendarDays, Users, Sparkles, MapPin, BedDouble, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, CalendarDays, Sparkles, MapPin, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getHomestay } from '../../api/homestays';
+import { getHomestay, searchAvailability } from '../../api/homestays';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -11,7 +11,6 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
 import ReviewSection from '../../components/ReviewSection';
-import { cn } from '../../lib/utils';
 
 export default function RoomDetailPage() {
   const { slug, roomTypeId } = useParams();
@@ -24,6 +23,7 @@ export default function RoomDetailPage() {
   const initialCheckIn = bookingIntent.checkIn || searchParams.get('check_in') || '';
   const initialCheckOut = bookingIntent.checkOut || searchParams.get('check_out') || '';
   const initialQuantity = Math.max(1, Number(bookingIntent.quantity || 1));
+  const guestCount = Math.min(4, Math.max(1, Number(bookingIntent.guestCount || searchParams.get('guests') || 1)));
 
   const [homestay, setHomestay] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +31,8 @@ export default function RoomDetailPage() {
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [quantity, setQuantity] = useState(initialQuantity);
+  const [availableCount, setAvailableCount] = useState(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -58,9 +60,62 @@ export default function RoomDetailPage() {
 
   const roomType = homestay?.room_types?.find((item) => String(item.id) === String(roomTypeId));
   const rooms = roomType?.rooms || [];
+  const availableRooms = rooms.filter((room) => {
+    if (room?.status === 'maintenance' || room?.status === 'unavailable') return false;
+    if (room?.cleanliness && room.cleanliness !== 'clean') return false;
+    return true;
+  });
+  const maxRooms = availableRooms.length;
   const heroImage = rooms.find((room) => room.main_image)?.main_image || homestay?.thumbnail || '';
   const nights = calculateNights(checkIn, checkOut);
-  const canCheckout = !!checkIn && !!checkOut && nights > 0;
+  const effectiveAvailableCount = checkIn && checkOut ? (availableCount ?? 0) : maxRooms;
+  const canCheckout = !!checkIn && !!checkOut && nights > 0 && effectiveAvailableCount > 0;
+
+  useEffect(() => {
+    if (!homestay?.id || !roomType || !checkIn || !checkOut) {
+      setAvailableCount(null);
+      return;
+    }
+
+    let active = true;
+
+    async function fetchAvailabilityForRoomType() {
+      setAvailabilityLoading(true);
+      try {
+        const res = await searchAvailability({
+          homestay_id: homestay.id,
+          check_in: checkIn,
+          check_out: checkOut,
+          guests: guestCount,
+        });
+
+        if (!active) return;
+
+        const match = (res.data || []).find((item) => String(item.room_type.id) === String(roomType.id));
+        setAvailableCount(match?.available_count ?? 0);
+      } catch {
+        if (active) {
+          setAvailableCount(0);
+        }
+      } finally {
+        if (active) {
+          setAvailabilityLoading(false);
+        }
+      }
+    }
+
+    fetchAvailabilityForRoomType();
+
+    return () => {
+      active = false;
+    };
+  }, [checkIn, checkOut, guestCount, homestay?.id, roomType]);
+
+  useEffect(() => {
+    if (!roomType) return;
+    const nextLimit = checkIn && checkOut ? (availableCount ?? 0) : maxRooms;
+    setQuantity((prev) => Math.max(1, Math.min(prev, nextLimit || 1)));
+  }, [availableCount, checkIn, checkOut, maxRooms, roomType]);
 
   function buildBookingIntent() {
     return {
@@ -72,6 +127,7 @@ export default function RoomDetailPage() {
       roomImage: heroImage,
       nightlyRate: roomType?.nightly_rate || 0,
       quantity,
+      guestCount,
       checkIn,
       checkOut,
     };
@@ -148,7 +204,7 @@ export default function RoomDetailPage() {
                     </Badge>
                     {roomType.rooms_count != null && (
                       <Badge className="bg-black/45 text-white border-0 backdrop-blur-sm">
-                        Còn {roomType.rooms_count} phòng
+                        Còn {checkIn && checkOut ? (effectiveAvailableCount || 0) : maxRooms} phòng
                       </Badge>
                     )}
                   </div>
@@ -156,7 +212,7 @@ export default function RoomDetailPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                {rooms.slice(0, 3).map((room) => (
+                {availableRooms.slice(0, 3).map((room) => (
                   <div key={room.id} className="overflow-hidden rounded-2xl border border-border bg-surface-container-low h-24">
                     {room.main_image ? (
                       <img src={room.main_image} alt={room.room_code || roomType.name} className="h-full w-full object-cover" />
@@ -194,7 +250,10 @@ export default function RoomDetailPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <Stat label="Sức chứa" value={`Tối đa ${roomType.max_guests} khách`} />
-                  <Stat label="Phòng hiện có" value={`${rooms.length || 0} phòng`} />
+                  <Stat
+                    label={checkIn && checkOut ? 'Phòng khả dụng' : 'Phòng hiện có'}
+                    value={`${checkIn && checkOut ? (effectiveAvailableCount || 0) : (rooms.length || 0)} phòng`}
+                  />
                 </div>
 
                 {!isAuthenticated && (
@@ -209,7 +268,7 @@ export default function RoomDetailPage() {
                             state: {
                               from: {
                                 pathname: `/homestays/${slug}/rooms/${roomTypeId}`,
-                                search: buildSearchParams(checkIn, checkOut),
+                                search: buildSearchParams(checkIn, checkOut, guestCount),
                               },
                               bookingIntent: buildBookingIntent(),
                             },
@@ -251,26 +310,34 @@ export default function RoomDetailPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs text-on-surface-variant">Số lượng phòng</p>
-                      <p className="font-semibold text-on-surface">Chọn số phòng muốn đặt</p>
+                      <p className="font-semibold text-on-surface">
+                        {availabilityLoading ? 'Đang kiểm tra phòng trống...' : 'Chọn số phòng muốn đặt'}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                        className="h-9 w-9 rounded-full border border-border bg-white flex items-center justify-center hover:bg-surface-container transition-colors"
-                      >
+                        <button
+                          type="button"
+                          onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                          className="h-9 w-9 rounded-full border border-border bg-white flex items-center justify-center hover:bg-surface-container transition-colors"
+                        >
                         -
                       </button>
                       <span className="w-8 text-center font-bold text-on-surface">{quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => setQuantity((prev) => prev + 1)}
-                        className="h-9 w-9 rounded-full border border-border bg-white flex items-center justify-center hover:bg-surface-container transition-colors"
-                      >
-                        +
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuantity((prev) => (effectiveAvailableCount ? Math.min(prev + 1, effectiveAvailableCount) : prev))}
+                          disabled={!effectiveAvailableCount || quantity >= effectiveAvailableCount}
+                          className="h-9 w-9 rounded-full border border-border bg-white flex items-center justify-center hover:bg-surface-container transition-colors"
+                        >
+                          +
+                        </button>
                     </div>
                   </div>
+                  {checkIn && checkOut && !availabilityLoading && effectiveAvailableCount < 1 && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                      Phòng này hiện không còn khả dụng trong khoảng thời gian bạn chọn.
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-[28px] border border-dashed border-primary/25 bg-primary/5 p-4 space-y-2">
@@ -371,10 +438,11 @@ function calculateNights(checkIn, checkOut) {
   return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
 }
 
-function buildSearchParams(checkIn, checkOut) {
+function buildSearchParams(checkIn, checkOut, guests) {
   const params = new URLSearchParams();
   if (checkIn) params.set('check_in', checkIn);
   if (checkOut) params.set('check_out', checkOut);
+  if (guests) params.set('guests', guests);
   return params.toString() ? `?${params.toString()}` : '';
 }
 

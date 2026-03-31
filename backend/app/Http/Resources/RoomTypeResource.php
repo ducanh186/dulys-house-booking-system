@@ -18,6 +18,8 @@ class RoomTypeResource extends JsonResource
             'nightly_rate' => (float) $this->nightly_rate,
             'max_guests' => (int) $this->max_guests,
             'is_active' => (bool) $this->is_active,
+            'is_suspended' => $this->trashed(),
+            'deleted_at' => $this->deleted_at?->toISOString(),
             'rooms_count' => $this->whenCounted('rooms'),
             'homestay' => $this->whenLoaded('homestay', fn () => new HomestayResource($this->homestay)),
             'rooms' => RoomResource::collection($this->whenLoaded('rooms')),

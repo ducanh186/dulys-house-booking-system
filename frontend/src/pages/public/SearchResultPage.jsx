@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Users, Calendar, MapPin, BedDouble, AlertCircle, Star, Building2 } from 'lucide-react';
 import { searchAvailability, getHomestays } from '../../api/homestays';
 import { Button } from '../../components/ui/Button';
@@ -13,8 +13,6 @@ import { cn } from '../../lib/utils';
 
 export default function SearchResultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-
   const [checkIn, setCheckIn] = useState(searchParams.get('check_in') || '');
   const [checkOut, setCheckOut] = useState(searchParams.get('check_out') || '');
   const [guests, setGuests] = useState(searchParams.get('guests') || '');
@@ -23,7 +21,7 @@ export default function SearchResultPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [mode, setMode] = useState(checkIn && checkOut ? 'search' : 'listing');
-  const [homestayFilter, setHomestayFilter] = useState('');
+  const [homestayFilter, setHomestayFilter] = useState(searchParams.get('homestay_id') || '');
 
   useEffect(() => {
     if (checkIn && checkOut) {
@@ -57,15 +55,21 @@ export default function SearchResultPage() {
     return Object.values(grouped);
   }
 
-  async function fetchAvailability() {
+  async function fetchAvailability({
+    nextCheckIn = checkIn,
+    nextCheckOut = checkOut,
+    nextGuests = guests,
+    nextHomestayId = homestayFilter,
+  } = {}) {
     setLoading(true);
     setError(null);
     setMode('search');
     try {
       const res = await searchAvailability({
-        check_in: checkIn,
-        check_out: checkOut,
-        ...(guests ? { guests: Number(guests) } : {}),
+        check_in: nextCheckIn,
+        check_out: nextCheckOut,
+        ...(nextGuests ? { guests: Number(nextGuests) } : {}),
+        ...(nextHomestayId ? { homestay_id: nextHomestayId } : {}),
       });
       setResults(groupByHomestay(res.data || []));
     } catch (err) {
@@ -97,8 +101,27 @@ export default function SearchResultPage() {
     }
     const params = { check_in: checkIn, check_out: checkOut };
     if (guests) params.guests = guests;
+    if (homestayFilter) params.homestay_id = homestayFilter;
     setSearchParams(params);
-    fetchAvailability();
+    fetchAvailability({
+      nextCheckIn: checkIn,
+      nextCheckOut: checkOut,
+      nextGuests: guests,
+      nextHomestayId: homestayFilter,
+    });
+  }
+
+  function handleHomestayFilterChange(e) {
+    const next = e.target.value;
+    setHomestayFilter(next);
+    if (mode === 'search' && checkIn && checkOut) {
+      fetchAvailability({
+        nextCheckIn: checkIn,
+        nextCheckOut: checkOut,
+        nextGuests: guests,
+        nextHomestayId: next,
+      });
+    }
   }
 
   // Derive unique homestay list for filter dropdown
@@ -119,8 +142,8 @@ export default function SearchResultPage() {
   // Filter results by selected homestay
   const filteredResults = homestayFilter
     ? mode === 'search'
-      ? results.filter((item) => item.homestay.id === homestayFilter)
-      : results.filter((h) => h.id === homestayFilter)
+      ? results.filter((item) => String(item.homestay.id) === String(homestayFilter))
+      : results.filter((h) => String(h.id) === String(homestayFilter))
     : results;
 
   const today = new Date().toISOString().split('T')[0];
@@ -186,7 +209,7 @@ export default function SearchResultPage() {
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant pointer-events-none" />
                 <select
                   value={homestayFilter}
-                  onChange={(e) => setHomestayFilter(e.target.value)}
+                  onChange={handleHomestayFilterChange}
                   className="flex h-10 w-full rounded-full border border-input bg-background pl-9 pr-3 py-2 text-sm font-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none"
                 >
                   <option value="">Tất cả cơ sở</option>
@@ -243,6 +266,8 @@ export default function SearchResultPage() {
                     availableRoomTypes={item.available_room_types}
                     checkIn={checkIn}
                     checkOut={checkOut}
+                    guests={guests}
+                    homestayFilter={homestayFilter}
                   />
                 ))}
               </>
@@ -265,7 +290,7 @@ export default function SearchResultPage() {
   );
 }
 
-function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) {
+function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut, guests, homestayFilter }) {
   return (
     <div className="rounded-[32px] border border-border bg-white shadow-sm overflow-hidden">
       {/* Homestay header */}
@@ -285,7 +310,7 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) 
           </div>
         </div>
         <Link
-          to={`/homestays/${homestay.slug}?check_in=${checkIn}&check_out=${checkOut}`}
+          to={buildHomestayDetailPath(homestay.slug, { checkIn, checkOut, guests, homestayId: homestayFilter })}
           className="shrink-0 inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
         >
           Xem chi tiết
@@ -322,7 +347,7 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut }) 
                 </p>
               </div>
               <Link
-                to={`/homestays/${homestay.slug}/rooms/${rt.id}?check_in=${checkIn}&check_out=${checkOut}`}
+                to={buildRoomDetailPath(homestay.slug, rt.id, { checkIn, checkOut, guests, homestayId: homestayFilter })}
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-9 px-4 sunlight-gradient text-white hover:opacity-90"
               >
                 Xem phòng
@@ -395,4 +420,24 @@ function calculateNights(checkIn, checkOut) {
   const a = new Date(checkIn);
   const b = new Date(checkOut);
   return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
+}
+
+function buildHomestayDetailPath(slug, { checkIn, checkOut, guests, homestayId }) {
+  const params = new URLSearchParams();
+  if (checkIn) params.set('check_in', checkIn);
+  if (checkOut) params.set('check_out', checkOut);
+  if (guests) params.set('guests', guests);
+  if (homestayId) params.set('homestay_id', homestayId);
+  const query = params.toString();
+  return query ? `/homestays/${slug}?${query}` : `/homestays/${slug}`;
+}
+
+function buildRoomDetailPath(slug, roomTypeId, { checkIn, checkOut, guests, homestayId }) {
+  const params = new URLSearchParams();
+  if (checkIn) params.set('check_in', checkIn);
+  if (checkOut) params.set('check_out', checkOut);
+  if (guests) params.set('guests', guests);
+  if (homestayId) params.set('homestay_id', homestayId);
+  const query = params.toString();
+  return query ? `/homestays/${slug}/rooms/${roomTypeId}?${query}` : `/homestays/${slug}/rooms/${roomTypeId}`;
 }

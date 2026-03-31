@@ -16,6 +16,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('thumbnail')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
     }

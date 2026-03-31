@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RotateCcw } from 'lucide-react';
 import {
   getAdminHomestays,
   createHomestay,
   updateHomestay,
   deleteHomestay,
+  restoreHomestay,
 } from '../../api/admin';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
@@ -130,12 +131,18 @@ function HomestayForm({ initial, onSubmit, onCancel, submitting }) {
   );
 }
 
-function statusLabel(isActive) {
-  return isActive ? 'Hoạt động' : 'Ngừng hoạt động';
+function isSuspended(item) {
+  return !!item?.is_suspended || !!item?.deleted_at;
 }
 
-function statusClass(isActive) {
-  return isActive
+function statusLabel(item) {
+  if (isSuspended(item)) return 'Đình chỉ';
+  return item?.is_active ? 'Hoạt động' : 'Ngừng hoạt động';
+}
+
+function statusClass(item) {
+  if (isSuspended(item)) return 'bg-amber-100 text-amber-800 border-amber-200';
+  return item?.is_active
     ? 'bg-green-100 text-green-800 border-green-200'
     : 'bg-gray-100 text-gray-700 border-gray-200';
 }
@@ -155,13 +162,13 @@ export default function HomestayManagementPage() {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { user } = useAuth();
-  const { addToast } = useToast();
-  const isAdmin = user?.role === 'admin';
+  const { showToast } = useToast();
+  const isAdmin = ['admin', 'owner'].includes(user?.role);
 
   const fetchHomestays = useCallback(() => {
     setLoading(true);
     setError(null);
-    getAdminHomestays(page)
+    getAdminHomestays(page, { include_suspended: 1 })
       .then((res) => {
         setHomestays(res.data || []);
         setMeta(res.meta || null);
@@ -217,7 +224,18 @@ export default function HomestayManagementPage() {
       setDeleteDialog({ open: false, item: null });
       fetchHomestays();
     } catch {
-      addToast('Không thể xoá cơ sở này.', 'error');
+      showToast('Không thể đình chỉ cơ sở này.', 'error');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  async function handleRestore(id) {
+    try {
+      await restoreHomestay(id);
+      fetchHomestays();
+    } catch {
+      showToast('Không thể khôi phục cơ sở này.', 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -229,7 +247,7 @@ export default function HomestayManagementPage() {
         <div>
           <h1 className="text-2xl font-bold font-headline text-on-surface">Quản lý cơ sở</h1>
           <p className="text-sm text-on-surface-variant mt-1 font-body">
-            Thêm, sửa, xoá thông tin các cơ sở lưu trú.
+            Thêm, sửa, đình chỉ thông tin các cơ sở lưu trú.
           </p>
         </div>
         {!showForm && isAdmin && (
@@ -319,10 +337,10 @@ export default function HomestayManagementPage() {
                         {h.address}
                       </td>
                       <td className="px-4 py-4 text-on-surface-variant font-body">
-                        {h.hotline || '—'}
+                      {h.hotline || '—'}
                       </td>
                       <td className="px-4 py-4">
-                        <Badge className={statusClass(h.is_active)}>{statusLabel(h.is_active)}</Badge>
+                        <Badge className={statusClass(h)}>{statusLabel(h)}</Badge>
                       </td>
                       {isAdmin && (
                         <td className="px-4 py-4">
@@ -336,15 +354,27 @@ export default function HomestayManagementPage() {
                               <Pencil className="w-3.5 h-3.5" />
                               Sửa
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setDeleteDialog({ open: true, item: h })}
-                              className="gap-1"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Xoá
-                            </Button>
+                            {isSuspended(h) ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRestore(h.id)}
+                                className="gap-1"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Khôi phục
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setDeleteDialog({ open: true, item: h })}
+                                className="gap-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Đình chỉ
+                              </Button>
+                            )}
                           </div>
                         </td>
                       )}
@@ -364,9 +394,9 @@ export default function HomestayManagementPage() {
 
       <ConfirmDialog
         open={deleteDialog.open}
-        title="Xoá cơ sở"
-        message={`Bạn có chắc chắn muốn xoá cơ sở "${deleteDialog.item?.name}"? Hành động này không thể hoàn tác.`}
-        confirmLabel={deleteLoading ? 'Đang xoá...' : 'Xoá'}
+        title="Đình chỉ cơ sở"
+        message={`Bạn có chắc chắn muốn đình chỉ cơ sở "${deleteDialog.item?.name}"? Bạn có thể khôi phục lại sau.`}
+        confirmLabel={deleteLoading ? 'Đang đình chỉ...' : 'Đình chỉ'}
         destructive
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ open: false, item: null })}

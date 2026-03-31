@@ -11,7 +11,7 @@ import {
   Minus,
   Plus,
 } from 'lucide-react';
-import { getHomestay } from '../../api/homestays';
+import { getHomestay, searchAvailability } from '../../api/homestays';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/badge';
@@ -32,10 +32,13 @@ export default function HomestayDetailPage() {
 
   const checkIn = searchParams.get('check_in') || '';
   const checkOut = searchParams.get('check_out') || '';
+  const guestCount = Math.min(4, Math.max(1, Number(searchParams.get('guests') || 1)));
 
   const [homestay, setHomestay] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [availabilityByRoomType, setAvailabilityByRoomType] = useState({});
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   // quantity per room type: { [roomTypeId]: number }
   const [quantities, setQuantities] = useState({});
@@ -62,6 +65,60 @@ export default function HomestayDetailPage() {
     fetchData();
   }, [slug]);
 
+  useEffect(() => {
+    if (!homestay?.id || !checkIn || !checkOut) {
+      setAvailabilityByRoomType({});
+      return;
+    }
+
+    let active = true;
+
+    async function fetchAvailabilityForDates() {
+      setAvailabilityLoading(true);
+      try {
+        const res = await searchAvailability({
+          homestay_id: homestay.id,
+          check_in: checkIn,
+          check_out: checkOut,
+          guests: guestCount,
+        });
+
+        if (!active) return;
+
+        const nextAvailability = Object.fromEntries(
+          (res.data || []).map((item) => [String(item.room_type.id), item.available_count ?? 0])
+        );
+
+        setAvailabilityByRoomType(nextAvailability);
+        setQuantities((prev) => {
+          const next = { ...prev };
+          for (const roomType of homestay.room_types || []) {
+            const roomTypeId = String(roomType.id);
+            const availableCount = nextAvailability[roomTypeId] ?? 0;
+            next[roomType.id] = availableCount > 0
+              ? Math.min(Math.max(prev[roomType.id] || 1, 1), availableCount)
+              : 1;
+          }
+          return next;
+        });
+      } catch {
+        if (active) {
+          setAvailabilityByRoomType({});
+        }
+      } finally {
+        if (active) {
+          setAvailabilityLoading(false);
+        }
+      }
+    }
+
+    fetchAvailabilityForDates();
+
+    return () => {
+      active = false;
+    };
+  }, [checkIn, checkOut, guestCount, homestay]);
+
   function getNights() {
     if (!checkIn || !checkOut) return 0;
     const a = new Date(checkIn);
@@ -73,7 +130,7 @@ export default function HomestayDetailPage() {
     const qty = quantities[roomType.id] || 1;
     const target = {
       pathname: `/homestays/${slug}/rooms/${roomType.id}`,
-      search: buildSearchParams(checkIn, checkOut),
+      search: buildSearchParams(checkIn, checkOut, guestCount),
     };
     const bookingIntent = {
       homestayId: homestay.id,
@@ -84,6 +141,7 @@ export default function HomestayDetailPage() {
       roomImage: roomType.rooms?.find((room) => room.main_image)?.main_image || roomType.thumbnail || homestay.thumbnail,
       checkIn,
       checkOut,
+      guestCount,
       nightlyRate: roomType.nightly_rate,
       quantity: qty,
     };
@@ -109,7 +167,7 @@ export default function HomestayDetailPage() {
       const next = Math.max(1, (prev[roomTypeId] || 1) + delta);
       return {
         ...prev,
-        [roomTypeId]: maxRooms != null ? Math.min(next, maxRooms) : next,
+        [roomTypeId]: maxRooms > 0 ? Math.min(next, maxRooms) : 1,
       };
     });
   }
@@ -240,8 +298,10 @@ export default function HomestayDetailPage() {
                   roomType={rt}
                   hasDateParams={hasDateParams}
                   nights={nights}
+                  availabilityLoading={availabilityLoading}
+                  availableCount={hasDateParams ? (availabilityByRoomType[String(rt.id)] ?? 0) : getAvailableRooms(rt).length}
                   quantity={quantities[rt.id] || 1}
-                  onChangeQty={(delta) => changeQty(rt.id, delta, rt.rooms?.length)}
+                  onChangeQty={(delta) => changeQty(rt.id, delta, hasDateParams ? (availabilityByRoomType[String(rt.id)] ?? 0) : getAvailableRooms(rt).length)}
                   onBook={() => handleRoomAction(rt)}
                 />
               ))}
@@ -256,9 +316,11 @@ export default function HomestayDetailPage() {
   );
 }
 
-function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, onBook }) {
+function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, onBook, availableCount, availabilityLoading }) {
   const totalPrice = roomType.nightly_rate * nights * quantity;
-  const maxRooms = roomType.rooms?.length;
+  const fallbackCount = getAvailableRooms(roomType).length;
+  const maxRooms = availableCount ?? fallbackCount;
+  const isUnavailable = hasDateParams && !availabilityLoading && maxRooms < 1;
 
   return (
     <Card className="flex flex-col hover:shadow-lg transition-shadow duration-200 group">
@@ -293,11 +355,11 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
           <PriceDisplay amount={roomType.nightly_rate} className="font-semibold text-primary" />
           <span className="text-on-surface-variant text-xs">/ đêm</span>
         </div>
-        {roomType.rooms && roomType.rooms.length > 0 && (
-          <div className="text-xs text-on-surface-variant">
-            Số lượng phòng: {roomType.rooms.length}
-          </div>
-        )}
+        <div className="text-xs text-on-surface-variant">
+          {hasDateParams
+            ? (availabilityLoading ? 'Đang kiểm tra phòng trống...' : `Phòng khả dụng: ${maxRooms}`)
+            : `Số lượng phòng: ${fallbackCount}`}
+        </div>
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 border-t border-border pt-4">
@@ -336,6 +398,11 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
                   <PriceDisplay amount={totalPrice} />
                 </span>
               </div>
+              {isUnavailable && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Loại phòng này hiện không còn khả dụng trong khoảng thời gian bạn chọn.
+                </div>
+              )}
             </>
           ) : (
             <div className="rounded-2xl border border-dashed border-border bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
@@ -343,7 +410,7 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
             </div>
           )}
 
-          <Button onClick={onBook} className="w-full">
+          <Button onClick={onBook} className="w-full" disabled={isUnavailable}>
             Xem chi tiết phòng
           </Button>
         </div>
@@ -352,16 +419,25 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
   );
 }
 
+function getAvailableRooms(roomType) {
+  return (roomType.rooms || []).filter((room) => {
+    if (room?.status === 'maintenance' || room?.status === 'unavailable') return false;
+    if (room?.cleanliness && room.cleanliness !== 'clean') return false;
+    return true;
+  });
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function buildSearchParams(checkIn, checkOut) {
+function buildSearchParams(checkIn, checkOut, guests) {
   const params = new URLSearchParams();
   if (checkIn) params.set('check_in', checkIn);
   if (checkOut) params.set('check_out', checkOut);
+  if (guests) params.set('guests', guests);
   const str = params.toString();
   return str ? `?${str}` : '';
 }

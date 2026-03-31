@@ -79,9 +79,7 @@ class AvailabilityService
     {
         $this->bookingExpiry->expirePendingBookings();
 
-        $totalRooms = Room::where('room_type_id', $roomTypeId)
-            ->where('status', '!=', 'maintenance')
-            ->count();
+        $totalRooms = $this->bookableRoomsQuery($roomTypeId)->count();
 
         $reservedQuantity = BookingDetail::query()
             ->where('room_type_id', $roomTypeId)
@@ -102,9 +100,7 @@ class AvailabilityService
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
 
-        $totalRooms = Room::where('room_type_id', $roomTypeId)
-            ->where('status', '!=', 'maintenance')
-            ->count();
+        $totalRooms = $this->bookableRoomsQuery($roomTypeId)->count();
 
         $blockedDates = BlockedDate::where('room_type_id', $roomTypeId)
             ->whereDate('date_from', '<=', $end->toDateString())
@@ -176,11 +172,17 @@ class AvailabilityService
 
         $assignedRoomIds = $this->getAssignedRoomIds($roomTypeId, $checkIn, $checkOut);
 
-        return Room::where('room_type_id', $roomTypeId)
-            ->where('status', '!=', 'maintenance')
+        return $this->bookableRoomsQuery($roomTypeId)
             ->whereNotIn('id', $assignedRoomIds)
             ->orderBy('room_code')
             ->limit($quantity)
             ->get();
+    }
+
+    protected function bookableRoomsQuery(string $roomTypeId)
+    {
+        return Room::where('room_type_id', $roomTypeId)
+            ->where('status', 'available')
+            ->where('cleanliness', 'clean');
     }
 }

@@ -17,7 +17,7 @@ class SearchAvailabilityRequest extends FormRequest
             'homestay_id' => 'nullable|uuid|exists:homestays,id',
             'check_in' => 'required|date|after_or_equal:today',
             'check_out' => 'required|date|after:check_in',
-            'guests' => 'nullable|integer|min:1|max:20',
+            'guests' => 'nullable|integer|min:1|max:4',
         ];
     }
 }

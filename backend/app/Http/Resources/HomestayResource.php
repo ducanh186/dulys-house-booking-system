@@ -19,6 +19,8 @@ class HomestayResource extends JsonResource
             'description' => $this->description,
             'thumbnail' => $this->thumbnail,
             'is_active' => (bool) $this->is_active,
+            'is_suspended' => $this->trashed(),
+            'deleted_at' => $this->deleted_at?->toISOString(),
             'room_types_count' => $this->whenCounted('roomTypes'),
             'rooms_count' => $this->whenCounted('rooms'),
             'average_rating' => $this->reviews_avg_rating ? round((float) $this->reviews_avg_rating, 1) : null,

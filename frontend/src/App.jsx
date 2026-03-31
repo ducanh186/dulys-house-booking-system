@@ -7,6 +7,8 @@ import AdminLayout from './layouts/AdminLayout';
 import HomePage from './pages/public/HomePage';
 import LoginPage from './pages/public/LoginPage';
 import LoginVideoPage from './pages/public/LoginVideoPage';
+import ForgotPasswordPage from './pages/public/ForgotPasswordPage';
+import ForgotPasswordVerifyPage from './pages/public/ForgotPasswordVerifyPage';
 import RegisterPage from './pages/public/RegisterPage';
 import SearchResultPage from './pages/public/SearchResultPage';
 import HomestayDetailPage from './pages/public/HomestayDetailPage';
@@ -57,6 +59,8 @@ export default function App() {
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/login/video" element={<LoginVideoPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
             <Route path="/booking/success" element={<ProtectedRoute><BookingSuccessPage /></ProtectedRoute>} />

@@ -187,6 +187,11 @@ class BookingInventoryTest extends TestCase
             ->assertJsonPath('data.0.check_in_date', $booking->check_in->toDateString())
             ->assertJsonPath('meta.total', 1);
 
+        $this->getJson('/api/bookings?booking_id=' . $booking->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $booking->id);
+
         $emptyUser = User::factory()->create();
         Sanctum::actingAs($emptyUser);
 

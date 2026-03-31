@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '../ui/Input';
 
-export default function PasswordInput({ className = '', ...props }) {
+const PasswordInput = forwardRef(function PasswordInput({ className = '', ...props }, ref) {
   const [show, setShow] = useState(false);
 
   return (
     <div className="relative">
       <Input
+        ref={ref}
         {...props}
         type={show ? 'text' : 'password'}
         className={`pr-10 ${className}`}
@@ -23,4 +24,6 @@ export default function PasswordInput({ className = '', ...props }) {
       </button>
     </div>
   );
-}
+});
+
+export default PasswordInput;
