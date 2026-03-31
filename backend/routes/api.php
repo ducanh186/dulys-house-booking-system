@@ -109,7 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ─── Admin-only write operations ──────────────────────
-    Route::middleware(['role:admin,owner', 'throttle:60,1'])->prefix('admin')->group(function () {
+    Route::middleware(['role:admin', 'throttle:60,1'])->prefix('admin')->group(function () {
         // Homestays CUD (create, update, delete)
         Route::post('/homestays', [AdminHomestayController::class, 'store']);
         Route::put('/homestays/{homestay}', [AdminHomestayController::class, 'update']);
