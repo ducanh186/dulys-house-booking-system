@@ -19,6 +19,7 @@ class BookingService
         protected BookingExpiryService $bookingExpiry,
         protected PricingService $pricing,
         protected NotificationService $notifications,
+        protected RoomReservationService $roomReservations,
     ) {}
 
     /**
@@ -72,7 +73,7 @@ class BookingService
                 'check_out' => $checkOut,
                 'guest_count' => $data['guest_count'] ?? 1,
                 'status' => $isTransfer ? 'pending_payment' : 'pending',
-                'expires_at' => now()->addMinutes($isTransfer ? 30 : Booking::PENDING_HOLD_MINUTES),
+                'expires_at' => now()->addMinutes(Booking::PENDING_HOLD_MINUTES),
                 'total_amount' => $totalAmount,
                 'deposit' => $data['deposit'] ?? null,
                 'notes' => $data['notes'] ?? null,
@@ -98,6 +99,7 @@ class BookingService
             }
 
             Payment::create($paymentData);
+            $this->roomReservations->reserveRoomsForBooking($booking);
 
             $booking = $booking->load('details.roomType.homestay', 'payments', 'customer');
 
@@ -120,6 +122,8 @@ class BookingService
             'expires_at' => null,
             'confirmed_at' => now(),
         ]);
+
+        $this->roomReservations->markBookingRoomsBooked($booking);
 
         // Mark payment as success if confirming from payment_review
         if ($booking->payments()->where('status', 'proof_uploaded')->exists()) {
@@ -155,12 +159,7 @@ class BookingService
 
             foreach ($booking->details as $detail) {
                 $rooms = empty($roomAssignments)
-                    ? $this->availability->findAvailableRooms(
-                        $detail->room_type_id,
-                        $booking->check_in,
-                        $booking->check_out,
-                        $detail->quantity,
-                    )
+                    ? $this->roomReservations->reservedRoomsForDetail($detail)
                     : $this->resolveManuallyAssignedRooms($detail, $booking, $roomAssignments);
 
                 if ($rooms->count() < $detail->quantity) {
@@ -244,6 +243,7 @@ class BookingService
 
         // Cancel pending/proof_uploaded payments
         $booking->payments()->whereIn('status', ['pending', 'proof_uploaded'])->update(['status' => 'failed']);
+        $this->roomReservations->markBookingRoomsAvailable($booking);
 
         $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
         try { $this->notifications->notifyBookingCancelled($booking); } catch (\Throwable) {}

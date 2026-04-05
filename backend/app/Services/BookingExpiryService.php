@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\DB;
 
 class BookingExpiryService
 {
+    public function __construct(
+        protected NotificationService $notifications,
+        protected RoomReservationService $roomReservations,
+    ) {}
+
     public function expirePendingBookings(): int
     {
         $expiredIds = Booking::expiredPending()->pluck('id');
@@ -27,13 +32,22 @@ class BookingExpiryService
                 }
 
                 $booking->update([
-                    'status' => 'expired',
+                    'status' => 'cancelled',
                     'expires_at' => null,
+                    'cancelled_at' => now(),
+                    'cancel_reason' => 'Quá thời gian thanh toán.',
                 ]);
 
                 $booking->payments()
                     ->whereIn('status', ['pending', 'proof_uploaded'])
                     ->update(['status' => 'expired']);
+
+                $this->roomReservations->markBookingRoomsAvailable($booking);
+
+                try {
+                    $this->notifications->notifyBookingExpired($booking->fresh('customer.user', 'details.roomType.homestay'));
+                } catch (\Throwable) {
+                }
             }
 
             return $bookings->count();

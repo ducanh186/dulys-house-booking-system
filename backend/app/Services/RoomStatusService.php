@@ -8,7 +8,7 @@ class RoomStatusService
 {
     public function updateStatus(Room $room, string $status): Room
     {
-        $allowed = ['available', 'occupied', 'maintenance'];
+        $allowed = ['available', 'locked', 'booked', 'occupied', 'maintenance'];
 
         if (!in_array($status, $allowed)) {
             throw new \InvalidArgumentException("Trạng thái không hợp lệ: {$status}");

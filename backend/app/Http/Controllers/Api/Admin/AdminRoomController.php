@@ -80,7 +80,7 @@ class AdminRoomController extends Controller
     public function updateStatus(Request $request, Room $room): JsonResponse
     {
         $request->validate([
-            'status' => 'sometimes|in:available,occupied,maintenance',
+            'status' => 'sometimes|in:available,locked,booked,occupied,maintenance',
             'cleanliness' => 'sometimes|in:clean,dirty,cleaning',
         ]);
 

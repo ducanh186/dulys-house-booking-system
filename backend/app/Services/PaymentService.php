@@ -7,6 +7,10 @@ use App\Models\Payment;
 
 class PaymentService
 {
+    public function __construct(
+        protected RoomReservationService $roomReservations,
+    ) {}
+
     public function createPayment(Booking $booking, string $method, float $amount): Payment
     {
         return Payment::create([
@@ -66,6 +70,8 @@ class PaymentService
             'confirmed_at' => now(),
         ]);
 
+        $this->roomReservations->markBookingRoomsBooked($payment->booking);
+
         return $payment->fresh();
     }
 
@@ -81,6 +87,8 @@ class PaymentService
             'cancelled_at' => now(),
             'cancel_reason' => $reason ?? 'Thanh toán bị từ chối.',
         ]);
+
+        $this->roomReservations->markBookingRoomsAvailable($payment->booking);
 
         return $payment->fresh();
     }

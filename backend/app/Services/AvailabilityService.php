@@ -79,7 +79,7 @@ class AvailabilityService
     {
         $this->bookingExpiry->expirePendingBookings();
 
-        $totalRooms = $this->bookableRoomsQuery($roomTypeId)->count();
+        $totalRooms = $this->inventoryRoomsQuery($roomTypeId)->count();
 
         $reservedQuantity = BookingDetail::query()
             ->where('room_type_id', $roomTypeId)
@@ -157,7 +157,7 @@ class AvailabilityService
         return Room::where('room_type_id', $roomTypeId)
             ->whereHas('assignedBookingDetails.booking', function ($query) use ($checkIn, $checkOut) {
                 $query
-                    ->whereIn('status', ['confirmed', 'checked_in'])
+                    ->inventoryHeld()
                     ->overlapping($checkIn, $checkOut);
             })
             ->pluck('rooms.id');
@@ -184,5 +184,11 @@ class AvailabilityService
         return Room::where('room_type_id', $roomTypeId)
             ->where('status', 'available')
             ->where('cleanliness', 'clean');
+    }
+
+    protected function inventoryRoomsQuery(string $roomTypeId)
+    {
+        return Room::where('room_type_id', $roomTypeId)
+            ->whereIn('status', ['available', 'locked', 'booked', 'occupied']);
     }
 }

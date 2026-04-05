@@ -173,8 +173,9 @@ class NotificationService
 
     public function notifyBookingExpired(Booking $booking): void
     {
-        $booking->loadMissing('customer.user');
+        $booking->loadMissing('customer.user', 'details.roomType.homestay');
         $user = $booking->customer?->user;
+        $homestayName = $booking->details->first()?->roomType?->homestay?->name ?? 'Homestay';
 
         if ($user) {
             $this->notify(
@@ -182,6 +183,17 @@ class NotificationService
                 'booking_expired',
                 'Đặt phòng đã hết hạn',
                 "Đơn {$booking->booking_code} đã hết hạn do không hoàn tất thanh toán trong thời gian quy định.",
+                ['booking_id' => $booking->id],
+            );
+        }
+
+        $admins = User::whereIn('role', ['admin', 'owner', 'staff'])->get();
+        foreach ($admins as $admin) {
+            $this->notify(
+                $admin,
+                'booking_auto_cancelled',
+                'Đơn hàng đã bị huỷ tự động',
+                "Đơn {$booking->booking_code} tại {$homestayName} đã bị huỷ tự động do quá thời gian thanh toán.",
                 ['booking_id' => $booking->id],
             );
         }
