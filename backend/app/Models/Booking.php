@@ -19,7 +19,8 @@ class Booking extends Model
 
     protected $fillable = [
         'booking_code', 'customer_id', 'staff_id', 'check_in', 'check_out',
-        'guest_count', 'status', 'expires_at', 'total_amount', 'deposit', 'notes',
+        'guest_count', 'status', 'expires_at', 'confirmed_at', 'cancelled_at',
+        'cancel_reason', 'total_amount', 'deposit', 'notes',
     ];
 
     protected function casts(): array
@@ -28,6 +29,8 @@ class Booking extends Model
             'check_in' => 'datetime',
             'check_out' => 'datetime',
             'expires_at' => 'datetime',
+            'confirmed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'total_amount' => 'decimal:2',
             'deposit' => 'decimal:2',
             'guest_count' => 'integer',
@@ -73,7 +76,7 @@ class Booking extends Model
                 ->whereIn('status', ['confirmed', 'checked_in'])
                 ->orWhere(function (Builder $pending) {
                     $pending
-                        ->where('status', 'pending')
+                        ->whereIn('status', ['pending', 'pending_payment', 'payment_review'])
                         ->where(function (Builder $expiry) {
                             $expiry
                                 ->whereNull('expires_at')
@@ -86,7 +89,7 @@ class Booking extends Model
     public function scopeExpiredPending(Builder $query): Builder
     {
         return $query
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'pending_payment', 'payment_review'])
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now());
     }
@@ -98,12 +101,12 @@ class Booking extends Model
 
     public function isCancellable(): bool
     {
-        return in_array($this->status, ['pending', 'confirmed']);
+        return in_array($this->status, ['pending', 'pending_payment', 'payment_review', 'confirmed']);
     }
 
     public function isPendingExpired(): bool
     {
-        return $this->status === 'pending'
+        return in_array($this->status, ['pending', 'pending_payment', 'payment_review'])
             && $this->expires_at !== null
             && $this->expires_at->isPast();
     }
