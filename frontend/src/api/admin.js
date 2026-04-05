@@ -87,11 +87,17 @@ export const cancelAdminBooking = (id) =>
   client.patch(`/admin/bookings/${id}/cancel`);
 
 // Payments
-export const getPayments = (page = 1) =>
-  client.get('/admin/payments', { params: { page } });
+export const getPayments = (page = 1, params = {}) =>
+  client.get('/admin/payments', { params: { page, ...params } });
 
 export const createPayment = (data) =>
   client.post('/admin/payments', data);
+
+export const confirmPayment = (paymentId) =>
+  client.patch(`/admin/payments/${paymentId}/confirm`);
+
+export const rejectPayment = (paymentId, reason) =>
+  client.patch(`/admin/payments/${paymentId}/reject`, { reason });
 
 // Customers
 export const getCustomers = (page = 1) =>
@@ -99,6 +105,19 @@ export const getCustomers = (page = 1) =>
 
 export const getCustomer = (id) =>
   client.get(`/admin/customers/${id}`);
+
+// Internal Accounts
+export const getAdminAccounts = (page = 1, params = {}) =>
+  client.get('/admin/accounts', { params: { page, ...params } });
+
+export const createAdminAccount = (data) =>
+  client.post('/admin/accounts', data);
+
+export const updateAdminAccount = (id, data) =>
+  client.put(`/admin/accounts/${id}`, data);
+
+export const updateAdminAccountStatus = (id, is_active) =>
+  client.patch(`/admin/accounts/${id}/status`, { is_active });
 
 // Availability Calendar
 export const getRoomTypeCalendar = (roomTypeId, month) =>
