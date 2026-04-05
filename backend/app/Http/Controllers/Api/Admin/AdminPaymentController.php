@@ -8,6 +8,7 @@ use App\Http\Resources\PaymentResource;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\BookingExpiryService;
+use App\Services\NotificationService;
 use App\Services\PaymentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class AdminPaymentController extends Controller
     public function __construct(
         protected BookingExpiryService $bookingExpiry,
         protected PaymentService $paymentService,
+        protected NotificationService $notifications,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -54,6 +56,41 @@ class AdminPaymentController extends Controller
             new PaymentResource($payment->fresh('booking.customer', 'booking.details.roomType.homestay')),
             'Ghi nhận thanh toán thành công.',
             201
+        );
+    }
+
+    public function confirm(Request $request, Payment $payment): JsonResponse
+    {
+        if (!in_array($payment->status, ['pending', 'proof_uploaded'])) {
+            return $this->error('Thanh toán không ở trạng thái có thể xác nhận.', 422);
+        }
+
+        $this->paymentService->confirmPayment($payment, $request->user()->id);
+
+        $booking = $payment->booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        try { $this->notifications->notifyPaymentConfirmed($booking); } catch (\Throwable) {}
+
+        return $this->success(
+            new PaymentResource($payment->fresh('booking.customer', 'booking.details.roomType.homestay')),
+            'Đã xác nhận thanh toán.'
+        );
+    }
+
+    public function reject(Request $request, Payment $payment): JsonResponse
+    {
+        if (!in_array($payment->status, ['pending', 'proof_uploaded'])) {
+            return $this->error('Thanh toán không ở trạng thái có thể từ chối.', 422);
+        }
+
+        $reason = $request->input('reason');
+        $this->paymentService->rejectPayment($payment, $reason);
+
+        $booking = $payment->booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        try { $this->notifications->notifyBookingCancelled($booking); } catch (\Throwable) {}
+
+        return $this->success(
+            new PaymentResource($payment->fresh('booking.customer', 'booking.details.roomType.homestay')),
+            'Đã từ chối thanh toán.'
         );
     }
 }
