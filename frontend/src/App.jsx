@@ -14,6 +14,7 @@ import SearchResultPage from './pages/public/SearchResultPage';
 import HomestayDetailPage from './pages/public/HomestayDetailPage';
 import RoomDetailPage from './pages/public/RoomDetailPage';
 import BookingPage from './pages/public/BookingPage';
+import PaymentPage from './pages/public/PaymentPage';
 import BookingSuccessPage from './pages/public/BookingSuccessPage';
 import MyBookingsPage from './pages/public/MyBookingsPage';
 import ReviewPage from './pages/public/ReviewPage';
@@ -35,6 +36,7 @@ import PaymentManagementPage from './pages/admin/PaymentManagementPage';
 import AvailabilityPage from './pages/admin/AvailabilityPage';
 import ReportsPage from './pages/admin/ReportsPage.jsx';
 import CustomerReportsPage from './pages/admin/CustomerReportsPage.jsx';
+import UserAccountManagementPage from './pages/admin/UserAccountManagementPage.jsx';
 
 function LegacyReviewRedirect() {
   const { bookingId } = useParams();
@@ -63,6 +65,7 @@ export default function App() {
             <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
+            <Route path="/booking/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
             <Route path="/booking/success" element={<ProtectedRoute><BookingSuccessPage /></ProtectedRoute>} />
             <Route path="/my-profile" element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
             <Route path="/my-profile/bookings" element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
@@ -97,6 +100,7 @@ export default function App() {
             <Route path="availability" element={<AvailabilityPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="reports/customers" element={<CustomerReportsPage />} />
+            <Route path="accounts" element={<ProtectedRoute roles={['admin']}><UserAccountManagementPage /></ProtectedRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>
