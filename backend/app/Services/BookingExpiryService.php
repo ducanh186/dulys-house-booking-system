@@ -27,13 +27,13 @@ class BookingExpiryService
                 }
 
                 $booking->update([
-                    'status' => 'cancelled',
+                    'status' => 'expired',
                     'expires_at' => null,
                 ]);
 
                 $booking->payments()
-                    ->where('status', 'pending')
-                    ->update(['status' => 'failed']);
+                    ->whereIn('status', ['pending', 'proof_uploaded'])
+                    ->update(['status' => 'expired']);
             }
 
             return $bookings->count();
