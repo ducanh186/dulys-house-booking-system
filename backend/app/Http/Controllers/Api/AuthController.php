@@ -53,7 +53,15 @@ class AuthController extends Controller
             return $this->error('Email hoặc mật khẩu không đúng.', 401);
         }
 
-        $user = Auth::user();
+        /** @var User $user */
+        $user = Auth::user()->loadMissing('staff');
+
+        if ($user->isStaff() && !($user->staff?->is_active)) {
+            Auth::logout();
+
+            return $this->error('Tài khoản nội bộ đã bị vô hiệu hóa.', 403);
+        }
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return $this->success([
