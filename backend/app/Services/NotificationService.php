@@ -137,4 +137,53 @@ class NotificationService
             Mail::to($customerEmail)->send(new BookingCheckedOutMail($booking, $customerName));
         }
     }
+
+    public function notifyProofUploaded(Booking $booking): void
+    {
+        $booking->loadMissing('customer.user', 'details.roomType.homestay');
+        $homestayName = $booking->details->first()?->roomType?->homestay?->name ?? 'Homestay';
+
+        $admins = User::whereIn('role', ['admin', 'owner', 'staff'])->get();
+        foreach ($admins as $admin) {
+            $this->notify(
+                $admin,
+                'proof_uploaded',
+                'Khách đã gửi minh chứng thanh toán',
+                "Đơn {$booking->booking_code} từ {$booking->customer->full_name} tại {$homestayName} đã gửi minh chứng chuyển khoản. Vui lòng xác nhận.",
+                ['booking_id' => $booking->id],
+            );
+        }
+    }
+
+    public function notifyPaymentConfirmed(Booking $booking): void
+    {
+        $booking->loadMissing('customer.user');
+        $user = $booking->customer?->user;
+
+        if ($user) {
+            $this->notify(
+                $user,
+                'payment_confirmed',
+                'Thanh toán đã được xác nhận',
+                "Thanh toán cho đơn {$booking->booking_code} đã được xác nhận. Đơn đặt phòng của bạn đã được xác nhận.",
+                ['booking_id' => $booking->id],
+            );
+        }
+    }
+
+    public function notifyBookingExpired(Booking $booking): void
+    {
+        $booking->loadMissing('customer.user');
+        $user = $booking->customer?->user;
+
+        if ($user) {
+            $this->notify(
+                $user,
+                'booking_expired',
+                'Đặt phòng đã hết hạn',
+                "Đơn {$booking->booking_code} đã hết hạn do không hoàn tất thanh toán trong thời gian quy định.",
+                ['booking_id' => $booking->id],
+            );
+        }
+    }
 }
