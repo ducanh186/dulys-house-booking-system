@@ -125,7 +125,6 @@ function ModernLoginShell({
           <AuthCard
             eyebrow="Đăng nhập"
             title="Chào mừng trở lại"
-            subtitle="Một giao diện sáng, rõ và tập trung cho luồng đặt phòng."
             email={email}
             password={password}
             setEmail={setEmail}
