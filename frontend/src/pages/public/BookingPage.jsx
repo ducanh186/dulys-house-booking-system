@@ -168,16 +168,30 @@ export default function BookingPage() {
       };
 
       const res = await createBooking(payload);
-      navigate('/booking/success', {
-        state: {
-          booking: res.data,
-          homestayName,
-          roomTypeName,
-          roomImage,
-          paymentMethod,
-        },
-        replace: true,
-      });
+      const bookingData = res.data;
+
+      if (paymentMethod === 'transfer') {
+        navigate('/booking/payment', {
+          state: {
+            booking: bookingData,
+            homestayName,
+            roomTypeName,
+            roomImage,
+          },
+          replace: true,
+        });
+      } else {
+        navigate('/booking/success', {
+          state: {
+            booking: bookingData,
+            homestayName,
+            roomTypeName,
+            roomImage,
+            paymentMethod,
+          },
+          replace: true,
+        });
+      }
     } catch (err) {
       setApiError(
         err?.message ||
