@@ -21,38 +21,43 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import NotificationBell from '../components/NotificationBell';
 
-const navGroups = [
-  {
-    label: 'Tổng quan',
-    items: [
-      { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: 'Vận hành',
-    items: [
-      { to: '/admin/bookings', label: 'Đặt phòng', description: 'Xử lý đơn đặt phòng', icon: ClipboardList },
-      { to: '/admin/availability', label: 'Lịch phòng', description: 'Kiểm soát tình trạng phòng', icon: CalendarRange },
-      { to: '/admin/homestays', label: 'Cơ sở', description: 'Quản lý homestay', icon: Building2 },
-      { to: '/admin/rooms', label: 'Phòng', description: 'Danh sách phòng', icon: Search },
-      { to: '/admin/payments', label: 'Thanh toán', description: 'Giao dịch và đối soát', icon: CreditCard },
-    ],
-  },
-  {
-    label: 'Dữ liệu',
-    items: [
-      { to: '/admin/customers', label: 'Khách hàng', description: 'Lịch sử và hồ sơ', icon: Users2 },
-      { to: '/admin/reports', label: 'Báo cáo hệ thống', description: 'Doanh thu và vận hành', icon: BarChart3 },
-      { to: '/admin/reports/customers', label: 'Báo cáo khách hàng', description: 'Hành vi và phân khúc', icon: MessageSquare },
-    ],
-  },
-];
+function getNavGroups(role) {
+  return [
+    {
+      label: 'Tổng quan',
+      items: [
+        { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: 'Vận hành',
+      items: [
+        { to: '/admin/bookings', label: 'Đặt phòng', description: 'Xử lý đơn đặt phòng', icon: ClipboardList },
+        { to: '/admin/availability', label: 'Lịch phòng', description: 'Kiểm soát tình trạng phòng', icon: CalendarRange },
+        { to: '/admin/homestays', label: 'Cơ sở', description: 'Quản lý homestay', icon: Building2 },
+        { to: '/admin/rooms', label: 'Phòng', description: 'Danh sách phòng', icon: Search },
+        { to: '/admin/payments', label: 'Thanh toán', description: 'Giao dịch và đối soát', icon: CreditCard },
+      ],
+    },
+    {
+      label: 'Dữ liệu',
+      items: [
+        { to: '/admin/customers', label: 'Khách hàng', description: 'Lịch sử và hồ sơ', icon: Users2 },
+        ...(role === 'admin'
+          ? [{ to: '/admin/accounts', label: 'Tài khoản', description: 'Nhân sự nội bộ', icon: Bell }]
+          : []),
+        { to: '/admin/reports', label: 'Báo cáo hệ thống', description: 'Doanh thu và vận hành', icon: BarChart3 },
+        { to: '/admin/reports/customers', label: 'Báo cáo khách hàng', description: 'Hành vi và phân khúc', icon: MessageSquare },
+      ],
+    },
+  ].filter((group) => group.items.length > 0);
+}
 
 function isActivePath(pathname, target) {
   return pathname === target || pathname.startsWith(`${target}/`);
 }
 
-function getActiveItem(pathname) {
+function getActiveItem(pathname, navGroups) {
   for (const group of navGroups) {
     const match = group.items.find((item) => isActivePath(pathname, item.to));
     if (match) return match;
@@ -66,7 +71,8 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  const activeItem = useMemo(() => getActiveItem(location.pathname), [location.pathname]);
+  const navGroups = useMemo(() => getNavGroups(user?.role), [user?.role]);
+  const activeItem = useMemo(() => getActiveItem(location.pathname, navGroups), [location.pathname, navGroups]);
   const roleLabel = user?.role === 'admin' ? 'Administrator' : user?.role === 'owner' ? 'Owner' : user?.role === 'staff' ? 'Staff' : 'Operator';
 
   return (
