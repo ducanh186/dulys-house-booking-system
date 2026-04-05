@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Admin\AdminPricingController;
 use App\Http\Controllers\Api\Admin\AdminReportController;
 use App\Http\Controllers\Api\Admin\AdminRoomController;
 use App\Http\Controllers\Api\Admin\AdminRoomTypeController;
+use App\Http\Controllers\Api\Admin\AdminUserAccountController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public ─────────────────────────────────────────────
@@ -39,10 +40,22 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::get('/homestays/{homestay:slug}', [HomestayController::class, 'show']);
     Route::get('/homestays/{homestay:slug}/reviews', [ReviewController::class, 'index']);
     Route::post('/search/availability', [SearchController::class, 'search']);
+
+    Route::get('/bank-info', function () {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'bank_name' => 'MB Bank',
+                'bank_code' => '970422',
+                'account_number' => '0379163557',
+                'account_holder' => 'DULY S HOUSE',
+            ],
+        ]);
+    });
 });
 
 // ─── Authenticated ──────────────────────────────────────
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active.internal'])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
@@ -55,6 +68,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/bookings/{booking}', [BookingController::class, 'show']);
     Route::patch('/bookings/{booking}/cancel', [BookingController::class, 'cancel']);
+    Route::post('/bookings/{booking}/payment-proof', [BookingController::class, 'uploadProof']);
+    Route::post('/bookings/{booking}/payment-submitted', [BookingController::class, 'markSubmitted']);
 
     // Reviews
     Route::post('/reviews', [ReviewController::class, 'store']);
@@ -90,6 +105,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Payments (read for all, create for all — operational)
         Route::get('/payments', [AdminPaymentController::class, 'index']);
         Route::post('/payments', [AdminPaymentController::class, 'store']);
+        Route::patch('/payments/{payment}/confirm', [AdminPaymentController::class, 'confirm']);
+        Route::patch('/payments/{payment}/reject', [AdminPaymentController::class, 'reject']);
 
         // Customers (read-only)
         Route::get('/customers', [AdminCustomerController::class, 'index']);
@@ -110,6 +127,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ─── Admin-only write operations ──────────────────────
     Route::middleware(['role:admin', 'throttle:60,1'])->prefix('admin')->group(function () {
+        // Internal accounts
+        Route::get('/accounts', [AdminUserAccountController::class, 'index']);
+        Route::post('/accounts', [AdminUserAccountController::class, 'store']);
+        Route::put('/accounts/{user}', [AdminUserAccountController::class, 'update']);
+        Route::patch('/accounts/{user}/status', [AdminUserAccountController::class, 'updateStatus']);
+
         // Homestays CUD (create, update, delete)
         Route::post('/homestays', [AdminHomestayController::class, 'store']);
         Route::put('/homestays/{homestay}', [AdminHomestayController::class, 'update']);
