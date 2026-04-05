@@ -35,4 +35,68 @@ class PaymentService
 
         return $payment->fresh();
     }
+
+    public function uploadProof(Payment $payment, string $proofImageUrl): Payment
+    {
+        $payment->update([
+            'proof_image_url' => $proofImageUrl,
+            'proof_uploaded_at' => now(),
+            'status' => 'proof_uploaded',
+        ]);
+
+        $payment->booking->update([
+            'status' => 'payment_review',
+        ]);
+
+        return $payment->fresh();
+    }
+
+    public function confirmPayment(Payment $payment, string $verifiedByUserId): Payment
+    {
+        $payment->update([
+            'status' => 'success',
+            'paid_at' => now(),
+            'verified_by' => $verifiedByUserId,
+            'verified_at' => now(),
+        ]);
+
+        $payment->booking->update([
+            'status' => 'confirmed',
+            'expires_at' => null,
+            'confirmed_at' => now(),
+        ]);
+
+        return $payment->fresh();
+    }
+
+    public function rejectPayment(Payment $payment, ?string $reason = null): Payment
+    {
+        $payment->update([
+            'status' => 'failed',
+        ]);
+
+        $payment->booking->update([
+            'status' => 'cancelled',
+            'expires_at' => null,
+            'cancelled_at' => now(),
+            'cancel_reason' => $reason ?? 'Thanh toán bị từ chối.',
+        ]);
+
+        return $payment->fresh();
+    }
+
+    public function markPaymentSubmitted(Payment $payment): Payment
+    {
+        if ($payment->status === 'pending') {
+            $payment->update([
+                'status' => 'proof_uploaded',
+            ]);
+
+            $payment->booking->update([
+                'status' => 'payment_review',
+            ]);
+        }
+
+        return $payment->fresh();
+    }
 }
