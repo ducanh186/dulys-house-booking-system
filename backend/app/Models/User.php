@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -12,6 +13,8 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasUuids, Notifiable;
+
+    public const INTERNAL_ROLES = ['admin', 'owner', 'staff'];
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'phone', 'avatar',
@@ -51,7 +54,12 @@ class User extends Authenticatable
 
     public function isStaff(): bool
     {
-        return in_array($this->role, ['admin', 'owner', 'staff']);
+        return in_array($this->role, self::INTERNAL_ROLES, true);
+    }
+
+    public function scopeInternal(Builder $query): Builder
+    {
+        return $query->whereIn('role', self::INTERNAL_ROLES);
     }
 
     public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
