@@ -16,6 +16,13 @@ class PaymentResource extends JsonResource
             'status' => $this->status,
             'amount' => (float) $this->amount,
             'paid_at' => $this->paid_at?->toISOString(),
+            'transfer_content' => $this->transfer_content,
+            'qr_payload' => $this->qr_payload,
+            'proof_image_url' => $this->proof_image_url,
+            'proof_uploaded_at' => $this->proof_uploaded_at?->toISOString(),
+            'verified_by' => $this->verified_by,
+            'verified_at' => $this->verified_at?->toISOString(),
+            'expires_at' => $this->expires_at?->toISOString(),
             'booking' => $this->whenLoaded('booking', fn () => new BookingReferenceResource($this->booking)),
         ];
     }
