@@ -14,6 +14,7 @@ import {
   checkInBooking,
   checkOutBooking,
   cancelAdminBooking,
+  confirmPayment,
 } from '../../api/admin';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -28,6 +29,7 @@ import { cn } from '../../lib/utils';
 
 const ACTION_LOADING_KEY = {
   confirm: 'confirm',
+  confirm_payment: 'confirm_payment',
   checkin: 'checkin',
   checkout: 'checkout',
   cancel: 'cancel',
@@ -71,11 +73,13 @@ function SummaryCard({ icon, label, value, hint }) {
   );
 }
 
-function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, loadingKey, highlighted }) {
+function BookingCard({ booking, onConfirm, onConfirmPayment, onCheckIn, onCheckOut, onCancel, loadingKey, highlighted }) {
   const canConfirm = booking.status === 'pending';
+  const canConfirmPayment = booking.status === 'payment_review';
   const canCheckIn = booking.status === 'confirmed';
   const canCheckOut = booking.status === 'checked_in';
-  const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+  const canCancel = ['pending', 'pending_payment', 'payment_review', 'confirmed'].includes(booking.status);
+  const proof = booking.payments?.[0]?.proof_image_url ?? null;
 
   return (
     <Card
@@ -156,6 +160,14 @@ function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, load
               <p className="mt-1 text-sm text-on-surface-variant">
                 Ghi chú: <span className="font-semibold text-on-surface">{booking.notes || 'Không có'}</span>
               </p>
+              {proof && (
+                <div className="mt-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-on-surface-variant mb-2">Minh chứng TT</p>
+                  <a href={proof} target="_blank" rel="noreferrer">
+                    <img src={proof} alt="Minh chứng" className="max-h-32 rounded-xl border border-border object-contain" />
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -167,6 +179,16 @@ function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, load
                 >
                   <CheckCheck className="h-4 w-4" />
                   {loadingKey === `${booking.id}-${ACTION_LOADING_KEY.confirm}` ? 'Đang xác nhận...' : 'Xác nhận'}
+                </Button>
+              )}
+              {canConfirmPayment && (
+                <Button
+                  onClick={() => onConfirmPayment(booking.id, booking.payments?.[0]?.id)}
+                  disabled={!!loadingKey}
+                  className="w-full gap-2 rounded-full bg-purple-600 hover:bg-purple-700"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                  {loadingKey === `${booking.id}-${ACTION_LOADING_KEY.confirm_payment}` ? 'Đang xác nhận...' : 'Xác nhận thanh toán'}
                 </Button>
               )}
               {canCheckIn && (
@@ -212,10 +234,13 @@ function BookingCard({ booking, onConfirm, onCheckIn, onCheckOut, onCancel, load
 const STATUS_FILTERS = [
   { value: '', label: 'Tất cả' },
   { value: 'pending', label: 'Chờ xác nhận' },
+  { value: 'pending_payment', label: 'Chờ thanh toán' },
+  { value: 'payment_review', label: 'Chờ xác nhận TT' },
   { value: 'confirmed', label: 'Đã xác nhận' },
   { value: 'checked_in', label: 'Nhận phòng' },
   { value: 'checked_out', label: 'Trả phòng' },
   { value: 'cancelled', label: 'Hủy phòng' },
+  { value: 'expired', label: 'Hết hạn' },
 ];
 
 export default function BookingManagementPage() {
@@ -239,10 +264,9 @@ export default function BookingManagementPage() {
         ...(statusFilter ? { status: statusFilter } : {}),
         ...(bookingIdFilter ? { booking_id: bookingIdFilter } : {}),
       });
-      const payload = response?.data ?? response ?? {};
       setBookings(normalizeCollection(response));
-      setMeta(payload.meta ?? null);
-      setServerSummary(payload.meta?.summary ?? payload.summary ?? null);
+      setMeta(response?.meta ?? null);
+      setServerSummary(response?.meta?.summary ?? response?.summary ?? null);
     } catch {
       setError('Không thể tải danh sách đặt phòng.');
     } finally {
@@ -278,7 +302,7 @@ export default function BookingManagementPage() {
   }
 
   const summary = useMemo(() => {
-    const fallback = { total: bookings.length, pending: 0, confirmed: 0, checked_in: 0, checked_out: 0, cancelled: 0 };
+    const fallback = { total: bookings.length, pending: 0, pending_payment: 0, payment_review: 0, confirmed: 0, checked_in: 0, checked_out: 0, cancelled: 0, expired: 0 };
     for (const booking of bookings) {
       if (fallback[booking.status] != null) fallback[booking.status] += 1;
     }
@@ -387,6 +411,7 @@ export default function BookingManagementPage() {
                   key={booking.id}
                   booking={booking}
                   onConfirm={(id) => runAction(ACTION_LOADING_KEY.confirm, id, confirmBooking)}
+                  onConfirmPayment={(bookingId, paymentId) => runAction(ACTION_LOADING_KEY.confirm_payment, bookingId, () => confirmPayment(paymentId))}
                   onCheckIn={(id) => runAction(ACTION_LOADING_KEY.checkin, id, checkInBooking)}
                   onCheckOut={(id) => runAction(ACTION_LOADING_KEY.checkout, id, checkOutBooking)}
                   onCancel={(id) => setConfirmDialog({ open: true, bookingId: id })}
