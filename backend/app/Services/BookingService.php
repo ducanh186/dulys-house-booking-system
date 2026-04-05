@@ -62,6 +62,8 @@ class BookingService
                 ];
             }
 
+            $isTransfer = ($data['payment_method'] ?? 'transfer') === 'transfer';
+
             // Create booking
             $booking = Booking::create([
                 'booking_code' => $this->generateBookingCode(),
@@ -69,8 +71,8 @@ class BookingService
                 'check_in' => $checkIn,
                 'check_out' => $checkOut,
                 'guest_count' => $data['guest_count'] ?? 1,
-                'status' => 'pending',
-                'expires_at' => now()->addMinutes(Booking::PENDING_HOLD_MINUTES),
+                'status' => $isTransfer ? 'pending_payment' : 'pending',
+                'expires_at' => now()->addMinutes($isTransfer ? 30 : Booking::PENDING_HOLD_MINUTES),
                 'total_amount' => $totalAmount,
                 'deposit' => $data['deposit'] ?? null,
                 'notes' => $data['notes'] ?? null,
@@ -81,13 +83,21 @@ class BookingService
                 $booking->details()->create($detail);
             }
 
-            // Create pending payment record
-            Payment::create([
+            // Create payment record
+            $paymentData = [
                 'booking_id' => $booking->id,
                 'method' => $data['payment_method'] ?? 'transfer',
                 'amount' => $totalAmount,
                 'status' => 'pending',
-            ]);
+            ];
+
+            if ($isTransfer) {
+                $paymentData['transfer_content'] = $booking->booking_code;
+                $paymentData['qr_payload'] = $this->generateVietQrUrl($booking->booking_code, $totalAmount);
+                $paymentData['expires_at'] = $booking->expires_at;
+            }
+
+            Payment::create($paymentData);
 
             $booking = $booking->load('details.roomType.homestay', 'payments', 'customer');
 
@@ -101,14 +111,25 @@ class BookingService
     {
         $this->bookingExpiry->expirePendingBookings();
 
-        if ($booking->status !== 'pending') {
-            throw new \RuntimeException('Chỉ có thể xác nhận đơn đặt phòng đang chờ duyệt.');
+        if (!in_array($booking->status, ['pending', 'payment_review'])) {
+            throw new \RuntimeException('Chỉ có thể xác nhận đơn đặt phòng đang chờ duyệt hoặc chờ xác nhận thanh toán.');
         }
 
         $booking->update([
             'status' => 'confirmed',
             'expires_at' => null,
+            'confirmed_at' => now(),
         ]);
+
+        // Mark payment as success if confirming from payment_review
+        if ($booking->payments()->where('status', 'proof_uploaded')->exists()) {
+            $booking->payments()->where('status', 'proof_uploaded')->update([
+                'status' => 'success',
+                'paid_at' => now(),
+                'verified_by' => auth()->id(),
+                'verified_at' => now(),
+            ]);
+        }
 
         $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
         try { $this->notifications->notifyBookingConfirmed($booking); } catch (\Throwable) {}
@@ -206,7 +227,7 @@ class BookingService
         });
     }
 
-    public function cancelBooking(Booking $booking): Booking
+    public function cancelBooking(Booking $booking, ?string $reason = null): Booking
     {
         $this->bookingExpiry->expirePendingBookings();
 
@@ -217,10 +238,12 @@ class BookingService
         $booking->update([
             'status' => 'cancelled',
             'expires_at' => null,
+            'cancelled_at' => now(),
+            'cancel_reason' => $reason,
         ]);
 
-        // Cancel pending payments
-        $booking->payments()->where('status', 'pending')->update(['status' => 'failed']);
+        // Cancel pending/proof_uploaded payments
+        $booking->payments()->whereIn('status', ['pending', 'proof_uploaded'])->update(['status' => 'failed']);
 
         $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
         try { $this->notifications->notifyBookingCancelled($booking); } catch (\Throwable) {}
@@ -235,6 +258,16 @@ class BookingService
         } while (Booking::where('booking_code', $code)->exists());
 
         return $code;
+    }
+
+    protected function generateVietQrUrl(string $transferContent, float $amount): string
+    {
+        $bankId = '970422';
+        $accountNo = '0379163557';
+        $template = 'compact2';
+        $amountInt = (int) $amount;
+
+        return "https://img.vietqr.io/image/{$bankId}-{$accountNo}-{$template}.png?amount={$amountInt}&addInfo=" . urlencode($transferContent) . '&accountName=' . urlencode('DULY S HOUSE');
     }
 
     protected function resolveManuallyAssignedRooms(BookingDetail $detail, Booking $booking, array $roomAssignments): Collection
