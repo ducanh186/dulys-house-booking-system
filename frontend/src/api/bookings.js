@@ -11,3 +11,14 @@ export const createBooking = (data) =>
 
 export const cancelBooking = (id) =>
   client.patch(`/bookings/${id}/cancel`);
+
+export const uploadPaymentProof = (bookingId, formData) =>
+  client.post(`/bookings/${bookingId}/payment-proof`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const markPaymentSubmitted = (bookingId) =>
+  client.post(`/bookings/${bookingId}/payment-submitted`);
+
+export const getBankInfo = () =>
+  client.get('/bank-info');
