@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateBookingRequest;
+use App\Http\Requests\UploadPaymentProofRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Services\BookingExpiryService;
 use App\Services\BookingService;
+use App\Services\NotificationService;
+use App\Services\PaymentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +23,8 @@ class BookingController extends Controller
     public function __construct(
         protected BookingExpiryService $bookingExpiry,
         protected BookingService $bookingService,
+        protected PaymentService $paymentService,
+        protected NotificationService $notifications,
     ) {}
 
     public function store(CreateBookingRequest $request): JsonResponse
@@ -114,5 +119,60 @@ class BookingController extends Controller
         } catch (\RuntimeException $e) {
             return $this->error($e->getMessage(), 422);
         }
+    }
+
+    public function uploadProof(UploadPaymentProofRequest $request, Booking $booking): JsonResponse
+    {
+        $customer = Customer::where('user_id', $request->user()->id)->first();
+
+        if (!$customer || $booking->customer_id !== $customer->id) {
+            return $this->error('Không tìm thấy đơn đặt phòng.', 404);
+        }
+
+        if (!in_array($booking->status, ['pending_payment', 'payment_review'])) {
+            return $this->error('Đơn đặt phòng không ở trạng thái chờ thanh toán.', 422);
+        }
+
+        $payment = $booking->payments()->whereIn('status', ['pending', 'proof_uploaded'])->first();
+
+        if (!$payment) {
+            return $this->error('Không tìm thấy thanh toán đang chờ.', 422);
+        }
+
+        $path = $request->file('proof_image')->store('payment-proofs', 'public');
+        $proofUrl = '/storage/' . $path;
+
+        $this->paymentService->uploadProof($payment, $proofUrl);
+
+        $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        try { $this->notifications->notifyProofUploaded($booking); } catch (\Throwable) {}
+
+        return $this->success(new BookingResource($booking), 'Đã tải lên minh chứng thanh toán.');
+    }
+
+    public function markSubmitted(Request $request, Booking $booking): JsonResponse
+    {
+        $customer = Customer::where('user_id', $request->user()->id)->first();
+
+        if (!$customer || $booking->customer_id !== $customer->id) {
+            return $this->error('Không tìm thấy đơn đặt phòng.', 404);
+        }
+
+        if ($booking->status !== 'pending_payment') {
+            return $this->error('Đơn đặt phòng không ở trạng thái chờ thanh toán.', 422);
+        }
+
+        $payment = $booking->payments()->where('status', 'pending')->first();
+
+        if (!$payment) {
+            return $this->error('Không tìm thấy thanh toán đang chờ.', 422);
+        }
+
+        $this->paymentService->markPaymentSubmitted($payment);
+
+        $booking = $booking->fresh('details.roomType.homestay', 'payments', 'customer');
+        try { $this->notifications->notifyProofUploaded($booking); } catch (\Throwable) {}
+
+        return $this->success(new BookingResource($booking), 'Đã ghi nhận thanh toán.');
     }
 }
