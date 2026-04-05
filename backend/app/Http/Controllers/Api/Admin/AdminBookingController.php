@@ -26,8 +26,12 @@ class AdminBookingController extends Controller
         $this->bookingExpiry->expirePendingBookings();
 
         $query = Booking::with('customer', 'details.roomType.homestay', 'details.room', 'details.assignedRooms', 'payments');
+        $summaryQuery = Booking::query();
+
         $this->applyFilters($query, $request);
-        $statusCounts = $this->statusCounts(clone $query);
+        $this->applyFilters($summaryQuery, $request, except: ['status', 'booking_id']);
+
+        $statusCounts = $this->statusCounts($summaryQuery);
 
         $bookings = $query->orderByDesc('created_at')->paginate(15);
 
@@ -98,25 +102,25 @@ class AdminBookingController extends Controller
         }
     }
 
-    protected function applyFilters(Builder $query, Request $request): void
+    protected function applyFilters(Builder $query, Request $request, array $except = []): void
     {
-        if ($request->filled('booking_id')) {
+        if (!in_array('booking_id', $except, true) && $request->filled('booking_id')) {
             $query->whereKey($request->query('booking_id'));
         }
 
-        if ($request->filled('status')) {
+        if (!in_array('status', $except, true) && $request->filled('status')) {
             $query->where('status', $request->query('status'));
         }
 
-        if ($request->filled('from')) {
+        if (!in_array('from', $except, true) && $request->filled('from')) {
             $query->whereDate('check_in', '>=', $request->query('from'));
         }
 
-        if ($request->filled('to')) {
+        if (!in_array('to', $except, true) && $request->filled('to')) {
             $query->whereDate('check_out', '<=', $request->query('to'));
         }
 
-        if ($request->filled('search')) {
+        if (!in_array('search', $except, true) && $request->filled('search')) {
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
                 $q->where('booking_code', 'like', "%{$search}%")
@@ -129,11 +133,13 @@ class AdminBookingController extends Controller
     {
         $defaults = [
             'pending' => 0,
+            'pending_payment' => 0,
+            'payment_review' => 0,
             'confirmed' => 0,
             'checked_in' => 0,
             'checked_out' => 0,
             'cancelled' => 0,
-            'failed' => 0,
+            'expired' => 0,
         ];
 
         $counts = $query
