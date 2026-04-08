@@ -32,7 +32,11 @@ class RoomSeeder extends Seeder
                 $cleanStates = ['clean', 'clean', 'clean', 'dirty', 'cleaning'];
 
                 for ($i = 1; $i <= $count; $i++) {
+                    // Ensure at least one room per type is not maintenance
                     $statusIdx = ($floor + $i) % count($statuses);
+                    if ($count === 1 && $statuses[$statusIdx] === 'maintenance') {
+                        $statusIdx = 0; // available + clean
+                    }
 
                     Room::create([
                         'room_type_id' => $roomType->id,

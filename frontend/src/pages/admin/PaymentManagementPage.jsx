@@ -20,6 +20,8 @@ const PAYMENT_STATUS_OPTIONS = [
   { value: 'success', label: 'Hoàn thành' },
   { value: 'failed', label: 'Thất bại' },
   { value: 'refunded', label: 'Đã hoàn tiền' },
+  { value: 'proof_uploaded', label: 'Đã gửi minh chứng' },
+  { value: 'expired', label: 'Hết hạn' },
 ];
 
 function methodLabel(method) {
@@ -36,6 +38,8 @@ function paymentStatusClass(status) {
     success: 'bg-green-100 text-green-800 border-green-200',
     failed: 'bg-red-100 text-red-800 border-red-200',
     refunded: 'bg-gray-100 text-gray-700 border-gray-200',
+    proof_uploaded: 'bg-blue-100 text-blue-800 border-blue-200',
+    expired: 'bg-orange-100 text-orange-800 border-orange-200',
   };
   return map[status] || 'bg-gray-100 text-gray-700 border-gray-200';
 }

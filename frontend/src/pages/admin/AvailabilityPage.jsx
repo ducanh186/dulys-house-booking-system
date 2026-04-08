@@ -107,7 +107,7 @@ export default function AvailabilityPage() {
     async function fetchRoomTypes() {
       setLoadingRooms(true);
       try {
-        const response = await getRoomTypes(1);
+        const response = await getRoomTypes(1, { active_only: 1, per_page: 100 });
         const list = normalizeCollection(response);
         if (!alive) return;
         setRoomTypes(list);
@@ -172,12 +172,7 @@ export default function AvailabilityPage() {
 
   const selectedRoomType = roomTypes.find((item) => String(item.id) === String(selectedRT));
   const selectedTone = selectedDay ? statusTone(selectedDay) : null;
-  const blockedDateId =
-    selectedDay?.blocked_date_id ||
-    selectedDay?.blockedDateId ||
-    selectedDay?.blocked_date?.id ||
-    selectedDay?.blocked?.id ||
-    null;
+  const blockedDateId = selectedDay?.blocked_date_id || null;
 
   const prevMonth = () => {
     const next = new Date(year, mon - 2, 1);
@@ -191,7 +186,12 @@ export default function AvailabilityPage() {
 
   async function reloadCalendar() {
     const response = await getRoomTypeCalendar(selectedRT, month);
-    setCalendar(normalizeCollection(response));
+    const list = normalizeCollection(response);
+    setCalendar(list);
+    setSelectedDay((current) => {
+      if (!current) return list[0] ?? null;
+      return list.find((day) => day.date === current.date) ?? current;
+    });
   }
 
   const handleBlock = async () => {
@@ -362,13 +362,14 @@ export default function AvailabilityPage() {
                   {calendar.map((day) => {
                     const tone = statusTone(day);
                     const isSelected = selectedDay?.date === day.date;
+                    const isPast = day.date < today;
 
                     return (
                       <button
                         key={day.date}
                         type="button"
                         onClick={() => setSelectedDay(day)}
-                        className={`min-h-[118px] rounded-3xl border p-2.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${tone.shell} ${
+                        className={`min-h-[118px] rounded-3xl border p-2.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${isPast ? 'border-gray-200 bg-gray-100 text-gray-400 opacity-60' : tone.shell} ${
                           isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-white' : ''
                         } ${day.date === today ? 'shadow-[0_0_0_1px_rgba(110,89,0,0.15)]' : ''}`}
                       >
@@ -488,7 +489,7 @@ export default function AvailabilityPage() {
                       className="gap-2 rounded-full"
                     >
                       <Shield className="h-4 w-4" />
-                      {blockedDateId ? 'Bỏ chặn' : 'Chưa có ID để bỏ chặn'}
+                      Bỏ chặn
                     </Button>
                   )}
 

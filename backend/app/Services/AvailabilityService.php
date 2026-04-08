@@ -100,7 +100,9 @@ class AvailabilityService
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
 
-        $totalRooms = $this->bookableRoomsQuery($roomTypeId)->count();
+        $totalRooms = Room::where('room_type_id', $roomTypeId)
+            ->where('status', '!=', 'maintenance')
+            ->count();
 
         $blockedDates = BlockedDate::where('room_type_id', $roomTypeId)
             ->whereDate('date_from', '<=', $end->toDateString())
@@ -124,13 +126,9 @@ class AvailabilityService
                 $date >= $b->date_from->toDateString() && $date <= $b->date_to->toDateString()
             );
 
-            $blockReason = null;
-            if ($isBlocked) {
-                $block = $blockedDates->first(fn ($b) =>
-                    $date >= $b->date_from->toDateString() && $date <= $b->date_to->toDateString()
-                );
-                $blockReason = $block?->reason;
-            }
+            $block = $blockedDates->first(fn ($b) =>
+                $date >= $b->date_from->toDateString() && $date <= $b->date_to->toDateString()
+            );
 
             $available = $isBlocked ? 0 : max(0, $totalRooms - (int) $booked);
 
@@ -140,7 +138,8 @@ class AvailabilityService
                 'booked_count' => (int) $booked,
                 'available_count' => $available,
                 'is_blocked' => $isBlocked,
-                'block_reason' => $blockReason,
+                'block_reason' => $block?->reason,
+                'blocked_date_id' => $block?->id,
             ];
 
             $current->addDay();

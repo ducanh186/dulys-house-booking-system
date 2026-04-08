@@ -28,7 +28,14 @@ class AdminRoomTypeController extends Controller
             $query->where('homestay_id', $request->query('homestay_id'));
         }
 
-        $roomTypes = $query->orderByDesc('created_at')->paginate(15);
+        if ($request->boolean('active_only')) {
+            $query->where('is_active', true)
+                  ->whereHas('homestay', fn ($q) => $q->where('is_active', true))
+                  ->whereHas('rooms', fn ($q) => $q->where('status', '!=', 'maintenance'));
+        }
+
+        $perPage = min((int) $request->query('per_page', 15), 100);
+        $roomTypes = $query->orderByDesc('created_at')->paginate($perPage);
 
         return $this->paginated($roomTypes, data: RoomTypeResource::collection($roomTypes->getCollection()));
     }

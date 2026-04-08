@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, BedDouble, AlertCircle, ChevronLeft, Shield, Headphones, CreditCard, Landmark, Wallet } from 'lucide-react';
+import { Calendar, BedDouble, AlertCircle, ChevronLeft, Shield, Headphones, Landmark } from 'lucide-react';
 import { createBooking } from '../../api/bookings';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
@@ -15,18 +15,6 @@ const PAYMENT_OPTIONS = [
     label: 'Chuyển khoản',
     description: 'Giữ chỗ nhanh, xác nhận thanh toán sau.',
     icon: Landmark,
-  },
-  {
-    value: 'card',
-    label: 'Thẻ thanh toán',
-    description: 'Thanh toán bằng thẻ nội địa hoặc quốc tế.',
-    icon: CreditCard,
-  },
-  {
-    value: 'cash',
-    label: 'Tiền mặt',
-    description: 'Thanh toán khi nhận phòng.',
-    icon: Wallet,
   },
 ];
 
