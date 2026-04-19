@@ -294,10 +294,10 @@ export default function RoomDetailPage() {
                   {roomType.name}
                 </CardTitle>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <Badge variant="secondary" className="rounded-full">
+                  <Badge variant="secondary" className="rounded-md px-3 py-1 text-xs font-bold">
                     {homestay.name}
                   </Badge>
-                  <span className="text-sm text-on-surface-variant">
+                  <span className="text-sm font-medium text-on-surface">
                     <PriceDisplay amount={roomType.nightly_rate} className="font-semibold text-primary" /> / đêm
                   </span>
                 </div>

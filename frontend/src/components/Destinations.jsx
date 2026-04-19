@@ -14,15 +14,22 @@ const CITY_IMAGES = {
   'sapa': 'https://lh3.googleusercontent.com/aida-public/AB6AXuBVuIiSINnxHqazQcMmIcf9eWGdXKBI3OGFA9tzB7qcCODSlnRFQox6rydFWzu0-Y4EYAiXZ0vAHC3QAV-5xXom_23KX2NKm8T_uNtGjkQ-tE-5Jg9oUqJ5lfUC6-ksJZuprKPLb5tU9WRsXANVW8HPfNgsxXfTqadS4G42n-fPWLOtB3zvvdMB_v4bCWqCr8fLo57oYf5mOWjKv40z6B3j2Ez6d2LnE71JCDpPGZAEv2TReupG7Gf6VWg8yZnypecpTA7cUcWsd-k5',
 };
 
-function getCityFromAddress(address) {
-  if (!address) return null;
-  const lower = address.toLowerCase();
-  for (const city of Object.keys(CITY_IMAGES)) {
-    if (lower.includes(city)) return city;
-  }
-  // Extract city from address (typically the last part before province)
-  const parts = address.split(',').map((p) => p.trim());
-  return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+function getDestinationLabel(homestay) {
+  const parts = (homestay.address || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts[0] || homestay.name?.replace(/^Duly's House\s*/i, '') || homestay.name;
+}
+
+function getDestinationSubtitle(address) {
+  const parts = (address || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length > 1 ? parts.slice(1).join(', ') : address;
 }
 
 function getCityImage(address) {
@@ -77,7 +84,8 @@ export function Destinations() {
         <h2 className="font-headline text-3xl md:text-4xl font-extrabold mb-12">Điểm đến phổ biến</h2>
         <div className="flex gap-6 overflow-x-auto pb-8 no-scrollbar -mx-4 px-4">
           {homestays.map((h) => {
-            const cityName = getCityFromAddress(h.address);
+            const destinationName = getDestinationLabel(h);
+            const destinationSubtitle = getDestinationSubtitle(h.address);
             const cityImage = h.thumbnail || getCityImage(h.address);
 
             return (
@@ -95,10 +103,19 @@ export function Destinations() {
                   ) : (
                     <ImagePlaceholder className="w-full h-full" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-6 left-6 text-white">
-                    <h4 className="font-headline text-[24px] font-bold">{cityName || h.name}</h4>
-                    <p className="text-white/80 font-body">{h.room_types_count || 0} loại phòng</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                    <h4 className="font-headline text-[24px] font-extrabold leading-tight text-white drop-shadow-sm">
+                      {destinationName}
+                    </h4>
+                    {destinationSubtitle && (
+                      <p className="mt-1 line-clamp-1 font-body text-sm font-semibold text-white/95 drop-shadow-sm">
+                        {destinationSubtitle}
+                      </p>
+                    )}
+                    <p className="mt-2 font-body text-sm font-bold text-white">
+                      {h.room_types_count || 0} loại phòng
+                    </p>
                   </div>
                 </div>
               </Link>
