@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getHomestays } from '../api/homestays';
 import ImagePlaceholder from './common/ImagePlaceholder';
+import { optimizeImageUrl } from '../lib/utils';
 
 // Fallback images per city keyword for visual variety
 const CITY_IMAGES = {
+  'hà nội': 'https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80',
   'đà nẵng': 'https://lh3.googleusercontent.com/aida-public/AB6AXuBVuIiSINnxHqazQcMmIcf9eWGdXKBI3OGFA9tzB7qcCODSlnRFQox6rydFWzu0-Y4EYAiXZ0vAHC3QAV-5xXom_23KX2NKm8T_uNtGjkQ-tE-5Jg9oUqJ5lfUC6-ksJZuprKPLb5tU9WRsXANVW8HPfNgsxXfTqadS4G42n-fPWLOtB3zvvdMB_v4bCWqCr8fLo57oYf5mOWjKv40z6B3j2Ez6d2LnE71JCDpPGZAEv2TReupG7Gf6VWg8yZnypecpTA7cUcWsd-k5',
   'hội an': 'https://lh3.googleusercontent.com/aida-public/AB6AXuAJH0HGlfXNjlLSeoP0Fh2_qO4cwxC0Xyu8C5NxlwYEK0MYNM1T2gyLVoK85dyZixRG3tyVp7HIRTVhMiuCJnPAJHgEwkFLGRfvrze9jtxWn8pJngGwdJjyWA7oonm5w7fF2M-edoc-bh-Fqx1ME0AyaGyvtzwObTAgqqJTtHywim_iGRtvsWx6K2cexPIZdr03WPliD67NFJdvTc6LOFrZUkBYmDNIlabSxf1hHfYVhEb6aXPrNlX1g2abx8yQ-JQSIBEn81bChC4r',
   'đà lạt': 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9Z9FC2q7deWq1jEtlIaZg9H_4O6KYnpyroEfAPQqWsK2tjnuHlc4uDdP_bnmFc2H1mge1AuTHWZDrser9IpwRQoWvuYagufmvC6vOKr_h3vwSyqgrGUXOY_yXUfzNH72HnD9aiKYN4CFhunP4eUZpGBREI-zfFyx2LHpFbHgwqvfCRAufK-49oIdFFvu7W3UWOvX1taIDGSGbw5OgKOdd2lc9YX39Bh8uXvJTTf2uSX1uE0FlEhpgianpboEvOyJqws1uGHekVAo9',
@@ -85,7 +87,10 @@ export function Destinations() {
                     <img
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       alt={h.name}
-                      src={cityImage}
+                      src={optimizeImageUrl(cityImage, 720)}
+                      loading="lazy"
+                      decoding="async"
+                      sizes="280px"
                     />
                   ) : (
                     <ImagePlaceholder className="w-full h-full" />

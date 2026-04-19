@@ -188,6 +188,7 @@ class AvailabilityService
     protected function inventoryRoomsQuery(string $roomTypeId)
     {
         return Room::where('room_type_id', $roomTypeId)
-            ->whereIn('status', ['available', 'locked', 'booked', 'occupied']);
+            ->whereIn('status', ['available', 'locked', 'booked', 'occupied'])
+            ->where('cleanliness', 'clean');
     }
 }

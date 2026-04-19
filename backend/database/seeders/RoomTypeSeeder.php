@@ -10,42 +10,42 @@ class RoomTypeSeeder extends Seeder
 {
     public function run(): void
     {
-        // Room types đa dạng theo từng homestay, giá phù hợp vùng miền
+        // Room types đa dạng theo từng cơ sở Hà Nội, giá phù hợp khu vực nội thành
         $homestayRoomTypes = [
-            // Đà Nẵng - biển, giá trung bình khá
-            "Duly's House Đà Nẵng" => [
-                ['name' => 'Standard', 'description' => 'Phòng tiêu chuẩn, view thành phố, đầy đủ tiện nghi cơ bản. Giường đôi 1m6, máy lạnh, wifi.', 'hourly_rate' => 150000, 'nightly_rate' => 500000, 'max_guests' => 2],
-                ['name' => 'Deluxe Sea View', 'description' => 'Phòng cao cấp view biển Mỹ Khê, ban công riêng. Giường King, bồn tắm đứng.', 'hourly_rate' => 250000, 'nightly_rate' => 900000, 'max_guests' => 2],
-                ['name' => 'VIP Suite', 'description' => 'Phòng VIP rộng 45m², view biển panorama, bồn tắm nằm, minibar. Phòng khách riêng.', 'hourly_rate' => 450000, 'nightly_rate' => 1500000, 'max_guests' => 3],
-                ['name' => 'Family Room', 'description' => 'Phòng gia đình 50m², 1 giường đôi + 2 giường đơn. Có bếp nhỏ, máy giặt.', 'hourly_rate' => 350000, 'nightly_rate' => 1100000, 'max_guests' => 4],
+            // Đội Cấn - trung tâm Ba Đình
+            "Duly's House Đội Cấn" => [
+                ['name' => 'Standard', 'description' => 'Phòng tiêu chuẩn gọn gàng, phù hợp 1-2 khách. Có giường đôi 1m6, máy lạnh, wifi và bàn làm việc nhỏ.', 'hourly_rate' => 150000, 'nightly_rate' => 500000, 'max_guests' => 2],
+                ['name' => 'Deluxe City View', 'description' => 'Phòng cao cấp có cửa sổ lớn nhìn khu Ba Đình. Giường King, khu ngồi thư giãn và phòng tắm riêng.', 'hourly_rate' => 250000, 'nightly_rate' => 900000, 'max_guests' => 2],
+                ['name' => 'VIP Suite', 'description' => 'Phòng suite rộng 45m², có góc tiếp khách, minibar và bồn tắm. Phù hợp khách công tác dài ngày.', 'hourly_rate' => 450000, 'nightly_rate' => 1500000, 'max_guests' => 3],
+                ['name' => 'Family Room', 'description' => 'Phòng gia đình 50m², 1 giường đôi và 2 giường đơn. Có bếp nhỏ, máy giặt và khu sinh hoạt chung.', 'hourly_rate' => 350000, 'nightly_rate' => 1100000, 'max_guests' => 4],
             ],
-            // Hội An - phố cổ, giá trung bình
-            "Duly's House Hội An" => [
-                ['name' => 'Standard', 'description' => 'Phòng tiêu chuẩn kiểu Hội An, nội thất gỗ, đèn lồng trang trí. Giường đôi, quạt trần.', 'hourly_rate' => 120000, 'nightly_rate' => 450000, 'max_guests' => 2],
-                ['name' => 'Deluxe Garden', 'description' => 'Phòng view sân vườn, ban công nhìn ra vườn hoa. Nội thất gỗ lim, bồn tắm đá.', 'hourly_rate' => 200000, 'nightly_rate' => 750000, 'max_guests' => 2],
-                ['name' => 'Heritage Suite', 'description' => 'Phòng VIP phong cách di sản, nội thất cổ điển Hội An. Phòng tắm lộ thiên, bồn ngâm thảo dược.', 'hourly_rate' => 380000, 'nightly_rate' => 1300000, 'max_guests' => 3],
-                ['name' => 'Family Room', 'description' => 'Phòng gia đình rộng rãi 55m², 2 tầng, tầng dưới phòng khách, tầng trên phòng ngủ.', 'hourly_rate' => 300000, 'nightly_rate' => 950000, 'max_guests' => 4],
+            // Âu Cơ - gần Hồ Tây
+            "Duly's House Âu Cơ" => [
+                ['name' => 'Standard', 'description' => 'Phòng tiêu chuẩn gần Hồ Tây, ánh sáng tự nhiên tốt. Giường đôi, quạt trần, máy lạnh và wifi.', 'hourly_rate' => 120000, 'nightly_rate' => 450000, 'max_guests' => 2],
+                ['name' => 'Deluxe Garden', 'description' => 'Phòng có ban công nhỏ và mảng xanh thư giãn. Nội thất gỗ sáng, phòng tắm riêng và khu đọc sách.', 'hourly_rate' => 200000, 'nightly_rate' => 750000, 'max_guests' => 2],
+                ['name' => 'Lake Breeze Suite', 'description' => 'Phòng suite yên tĩnh, phù hợp nghỉ cuối tuần quanh Hồ Tây. Có bồn tắm, sofa và không gian làm việc.', 'hourly_rate' => 380000, 'nightly_rate' => 1300000, 'max_guests' => 3],
+                ['name' => 'Family Room', 'description' => 'Phòng gia đình rộng 55m², bố trí hai khu ngủ và bàn ăn nhỏ. Phù hợp nhóm 3-4 khách.', 'hourly_rate' => 300000, 'nightly_rate' => 950000, 'max_guests' => 4],
             ],
-            // Đà Lạt - lãng mạn, giá trung bình
-            "Duly's House Đà Lạt" => [
-                ['name' => 'Standard', 'description' => 'Phòng tiêu chuẩn ấm cúng, view đồi thông. Giường đôi, chăn dày, lò sưởi điện.', 'hourly_rate' => 100000, 'nightly_rate' => 400000, 'max_guests' => 2],
-                ['name' => 'Deluxe Pine View', 'description' => 'Phòng cao cấp view rừng thông, ban công rộng có bàn trà. Bồn tắm nước nóng, lò sưởi.', 'hourly_rate' => 180000, 'nightly_rate' => 650000, 'max_guests' => 2],
-                ['name' => 'Penthouse', 'description' => 'Phòng trên tầng thượng, view 360° thành phố sương mù. Jacuzzi riêng, bếp đầy đủ.', 'hourly_rate' => 350000, 'nightly_rate' => 1200000, 'max_guests' => 4],
-                ['name' => 'Dorm (4 giường)', 'description' => 'Phòng tập thể 4 giường tầng, phù hợp nhóm bạn phượt. Tủ locker riêng, phòng tắm chung.', 'hourly_rate' => 50000, 'nightly_rate' => 180000, 'max_guests' => 4],
+            // Nguyễn Chí Thanh - trục trung tâm
+            "Duly's House Nguyễn Chí Thanh" => [
+                ['name' => 'Standard', 'description' => 'Phòng tiêu chuẩn ấm cúng, phù hợp khách công tác hoặc cặp đôi. Có giường đôi, tủ đồ và bàn làm việc.', 'hourly_rate' => 100000, 'nightly_rate' => 400000, 'max_guests' => 2],
+                ['name' => 'Deluxe Avenue View', 'description' => 'Phòng cao cấp nhìn ra trục Nguyễn Chí Thanh, có ban công nhỏ, bàn trà và phòng tắm riêng.', 'hourly_rate' => 180000, 'nightly_rate' => 650000, 'max_guests' => 2],
+                ['name' => 'Penthouse', 'description' => 'Phòng tầng cao có khu bếp nhỏ, sofa và không gian sinh hoạt riêng. Phù hợp gia đình hoặc nhóm nhỏ.', 'hourly_rate' => 350000, 'nightly_rate' => 1200000, 'max_guests' => 4],
+                ['name' => 'Dorm (4 giường)', 'description' => 'Phòng tập thể 4 giường tầng, phù hợp nhóm bạn lưu trú tiết kiệm. Có tủ locker riêng và phòng tắm chung.', 'hourly_rate' => 50000, 'nightly_rate' => 180000, 'max_guests' => 4],
             ],
-            // Phú Quốc - resort, giá cao
-            "Duly's House Phú Quốc" => [
-                ['name' => 'Bungalow Garden', 'description' => 'Bungalow riêng biệt giữa vườn nhiệt đới, mái lá, sàn gỗ. Giường King, minibar.', 'hourly_rate' => 250000, 'nightly_rate' => 800000, 'max_guests' => 2],
-                ['name' => 'Bungalow Beach Front', 'description' => 'Bungalow sát biển, bước chân ra cát trắng. View hoàng hôn tuyệt đẹp, võng đôi.', 'hourly_rate' => 400000, 'nightly_rate' => 1400000, 'max_guests' => 2],
-                ['name' => 'Pool Villa', 'description' => 'Villa riêng biệt với hồ bơi riêng 20m². 2 phòng ngủ, phòng khách, bếp đầy đủ.', 'hourly_rate' => 700000, 'nightly_rate' => 2500000, 'max_guests' => 4],
-                ['name' => 'Family Bungalow', 'description' => 'Bungalow gia đình rộng 60m², 1 giường đôi + 2 giường đơn. Sân vườn riêng, xích đu.', 'hourly_rate' => 350000, 'nightly_rate' => 1100000, 'max_guests' => 4],
+            // Yên Hoa - Cầu Giấy
+            "Duly's House Yên Hoa" => [
+                ['name' => 'Studio Garden', 'description' => 'Studio riêng tư, có góc bếp nhỏ và bàn ăn. Phù hợp khách lưu trú ngắn ngày tại khu Cầu Giấy.', 'hourly_rate' => 250000, 'nightly_rate' => 800000, 'max_guests' => 2],
+                ['name' => 'Studio Balcony', 'description' => 'Studio có ban công, ánh sáng tốt và khu làm việc riêng. Phù hợp khách cần không gian yên tĩnh.', 'hourly_rate' => 400000, 'nightly_rate' => 1400000, 'max_guests' => 2],
+                ['name' => 'Two-Bedroom Suite', 'description' => 'Căn suite 2 phòng ngủ, phòng khách và bếp đầy đủ. Phù hợp nhóm bạn hoặc gia đình tối đa 4 khách.', 'hourly_rate' => 700000, 'nightly_rate' => 2500000, 'max_guests' => 4],
+                ['name' => 'Family Studio', 'description' => 'Studio gia đình rộng 60m², 1 giường đôi và 2 giường đơn. Có khu bếp nhỏ và bàn ăn.', 'hourly_rate' => 350000, 'nightly_rate' => 1100000, 'max_guests' => 4],
             ],
-            // Sapa - trekking, giá thấp-trung bình
-            "Duly's House Sapa" => [
-                ['name' => 'Standard Mountain', 'description' => 'Phòng tiêu chuẩn view núi, nội thất gỗ thông, chăn thổ cẩm. Giường đôi, sưởi ấm.', 'hourly_rate' => 80000, 'nightly_rate' => 350000, 'max_guests' => 2],
-                ['name' => 'Deluxe Valley View', 'description' => 'Phòng view thung lũng Mường Hoa, ban công rộng. Bồn tắm gỗ, lò sưởi than.', 'hourly_rate' => 150000, 'nightly_rate' => 600000, 'max_guests' => 2],
-                ['name' => 'Homestay Truyền Thống', 'description' => 'Phòng kiểu nhà sàn dân tộc Hmong, trải nghiệm văn hóa bản địa. Sàn gỗ, chăn bông.', 'hourly_rate' => 60000, 'nightly_rate' => 250000, 'max_guests' => 3],
-                ['name' => 'Family Loft', 'description' => 'Phòng gác mái rộng 40m², view ruộng bậc thang. 2 giường đôi, bếp chung, ban công.', 'hourly_rate' => 200000, 'nightly_rate' => 700000, 'max_guests' => 4],
+            // Long Biên - không gian rộng hơn
+            "Duly's House Long Biên" => [
+                ['name' => 'Standard Green', 'description' => 'Phòng tiêu chuẩn yên tĩnh, phù hợp 1-2 khách. Nội thất sáng, giường đôi và khu để hành lý rộng.', 'hourly_rate' => 80000, 'nightly_rate' => 350000, 'max_guests' => 2],
+                ['name' => 'Deluxe River View', 'description' => 'Phòng có cửa sổ lớn, không gian thoáng và khu làm việc riêng. Phù hợp nghỉ dài ngày tại Long Biên.', 'hourly_rate' => 150000, 'nightly_rate' => 600000, 'max_guests' => 2],
+                ['name' => 'Private Studio', 'description' => 'Studio riêng có bếp nhỏ, sofa và bàn ăn. Phù hợp khách cần tự do sinh hoạt như ở nhà.', 'hourly_rate' => 60000, 'nightly_rate' => 250000, 'max_guests' => 3],
+                ['name' => 'Family Loft', 'description' => 'Phòng gác mái rộng 40m², có 2 giường đôi, bếp chung và không gian sinh hoạt cho gia đình nhỏ.', 'hourly_rate' => 200000, 'nightly_rate' => 700000, 'max_guests' => 4],
             ],
         ];
 

@@ -234,6 +234,8 @@ export default function PaymentPage() {
                       src={payment.qr_payload}
                       alt="VietQR"
                       className="w-64 h-auto rounded-2xl border border-border"
+                      loading="eager"
+                      decoding="async"
                     />
                   ) : (
                     <div className="w-64 h-64 rounded-2xl bg-surface-container flex items-center justify-center text-on-surface-variant text-sm">
@@ -287,7 +289,13 @@ export default function PaymentPage() {
                         <CheckCircle2 className="h-4 w-4" />
                         <span className="text-sm font-medium">Đã tải lên minh chứng</span>
                       </div>
-                      <img src={payment.proof_image_url} alt="Minh chứng" className="max-h-48 rounded-xl" />
+                      <img
+                        src={payment.proof_image_url}
+                        alt="Minh chứng"
+                        className="max-h-48 rounded-xl"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </div>
                   )}
 
@@ -304,7 +312,12 @@ export default function PaymentPage() {
                     />
                     {proofPreview ? (
                       <div className="relative inline-block">
-                        <img src={proofPreview} alt="Preview" className="max-h-48 rounded-xl mx-auto" />
+                        <img
+                          src={proofPreview}
+                          alt="Preview"
+                          className="max-h-48 rounded-xl mx-auto"
+                          decoding="async"
+                        />
                         <button
                           onClick={(e) => { e.stopPropagation(); clearProof(); }}
                           className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center"

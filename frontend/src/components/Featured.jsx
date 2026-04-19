@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getHomestays } from '../api/homestays';
 import PriceDisplay from './common/PriceDisplay';
 import ImagePlaceholder from './common/ImagePlaceholder';
+import { optimizeImageUrl } from '../lib/utils';
 
 export function Featured() {
   const [homestays, setHomestays] = useState([]);
@@ -68,7 +69,10 @@ export function Featured() {
                   <img
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     alt={h.name}
-                    src={h.thumbnail}
+                    src={optimizeImageUrl(h.thumbnail, 720)}
+                    loading="lazy"
+                    decoding="async"
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                   />
                 ) : (
                   <ImagePlaceholder className="w-full h-full" />

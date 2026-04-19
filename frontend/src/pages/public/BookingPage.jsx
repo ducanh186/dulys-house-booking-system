@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Input } from '../../components/ui/Input';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
+import { optimizeImageUrl } from '../../lib/utils';
 
 const PAYMENT_OPTIONS = [
   {
@@ -360,7 +361,14 @@ export default function BookingPage() {
             <Card className="overflow-hidden border-border shadow-[0_18px_60px_rgba(15,23,42,0.1)]">
               <div className="h-44 overflow-hidden">
                 {roomImage ? (
-                  <img src={roomImage} alt={roomTypeName || homestayName} className="h-full w-full object-cover" />
+                  <img
+                    src={optimizeImageUrl(roomImage, 720)}
+                    alt={roomTypeName || homestayName}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    sizes="(min-width: 1024px) 360px, 100vw"
+                  />
                 ) : (
                   <ImagePlaceholder name={roomTypeName || homestayName} className="h-full w-full" size="md" />
                 )}

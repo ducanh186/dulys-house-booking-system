@@ -18,7 +18,7 @@ import { Badge } from '../../components/ui/badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
-import { cn } from '../../lib/utils';
+import { cn, optimizeImageUrl } from '../../lib/utils';
 import ReviewSection from '../../components/ReviewSection';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
@@ -145,12 +145,16 @@ export default function HomestayDetailPage() {
       nightlyRate: roomType.nightly_rate,
       quantity: qty,
     };
+    const targetWithState = {
+      ...target,
+      state: { bookingIntent },
+    };
 
     if (!isAuthenticated) {
       showToast('Bạn cần đăng nhập để đặt phòng', 'warning');
       navigate('/login', {
         state: {
-          from: target,
+          from: targetWithState,
           bookingIntent,
         },
       });
@@ -204,9 +208,13 @@ export default function HomestayDetailPage() {
       <div className="relative h-64 sm:h-80 lg:h-96 bg-surface-container-highest">
         {homestay.thumbnail ? (
           <img
-            src={homestay.thumbnail}
+            src={optimizeImageUrl(homestay.thumbnail, 1440)}
             alt={homestay.name}
             className="h-full w-full object-cover"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            sizes="100vw"
           />
         ) : (
           <ImagePlaceholder name={homestay.name} className="h-full w-full" size="lg" />
@@ -321,16 +329,20 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
   const fallbackCount = getAvailableRooms(roomType).length;
   const maxRooms = availableCount ?? fallbackCount;
   const isUnavailable = hasDateParams && !availabilityLoading && maxRooms < 1;
+  const previewImage = roomType.rooms?.find((room) => room.main_image)?.main_image || roomType.thumbnail;
 
   return (
     <Card className="flex flex-col hover:shadow-lg transition-shadow duration-200 group">
       {/* Room image */}
       <div className="h-40 rounded-t-[32px] overflow-hidden">
-        {roomType.thumbnail ? (
+        {previewImage ? (
           <img
-            src={roomType.thumbnail}
+            src={optimizeImageUrl(previewImage, 640)}
             alt={roomType.name}
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            decoding="async"
+            sizes="(min-width: 768px) 50vw, 100vw"
           />
         ) : (
           <ImagePlaceholder name={roomType.name} className="h-full w-full" size="md" />
@@ -367,7 +379,7 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
           {hasDateParams ? (
             <>
               {maxRooms != null && (
-                <p className="text-xs text-on-surface-variant">Còn {maxRooms} phòng trống</p>
+                <AvailabilityBadge count={maxRooms} />
               )}
               <div className="flex items-center justify-between w-full">
                 <span className="text-sm text-on-surface-variant">Số lượng phòng:</span>
@@ -416,6 +428,15 @@ function RoomTypeCard({ roomType, hasDateParams, nights, quantity, onChangeQty, 
         </div>
       </CardFooter>
     </Card>
+  );
+}
+
+function AvailabilityBadge({ count }) {
+  return (
+    <div className="inline-flex w-fit items-center gap-1.5 rounded-md border border-emerald-950 bg-emerald-900 px-3 py-1 text-xs font-extrabold text-white shadow-sm">
+      <BedDouble className="h-3.5 w-3.5 text-white" />
+      Còn <span className="text-sm leading-none text-white">{count}</span> phòng trống
+    </div>
   );
 }
 

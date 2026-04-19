@@ -34,13 +34,17 @@ export function AuthLoginScreen({ variant = 'modern' }) {
     () => getPostLoginRedirectTarget(user, from),
     [user, from]
   );
+  const postLoginRedirect = useMemo(
+    () => splitRedirectTarget(postLoginTarget),
+    [postLoginTarget]
+  );
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
   }
 
   if (isAuthenticated) {
-    return <Navigate to={postLoginTarget} replace />;
+    return <Navigate to={postLoginRedirect.to} state={postLoginRedirect.state} replace />;
   }
 
   async function handleLogin(nextEmail, nextPassword) {
@@ -50,7 +54,8 @@ export function AuthLoginScreen({ variant = 'modern' }) {
 
     try {
       const me = await login(nextEmail, nextPassword);
-      navigate(getPostLoginRedirectTarget(me, from), { replace: true });
+      const target = splitRedirectTarget(getPostLoginRedirectTarget(me, from));
+      navigate(target.to, { replace: true, state: target.state });
     } catch (err) {
       if (err?.errors) {
         setFieldErrors(err.errors);
@@ -100,6 +105,18 @@ export function AuthLoginScreen({ variant = 'modern' }) {
       onQuickLogin={quickLogin}
     />
   );
+}
+
+function splitRedirectTarget(target) {
+  if (!target || typeof target === 'string') {
+    return { to: target || '/', state: undefined };
+  }
+
+  const { state, pathname = '/', search = '', hash = '' } = target;
+  return {
+    to: { pathname, search, hash },
+    state,
+  };
 }
 
 function ModernLoginShell({

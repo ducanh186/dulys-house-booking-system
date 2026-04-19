@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, CalendarDays, Sparkles, MapPin, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, CalendarDays, Sparkles, MapPin, ShieldCheck, BedDouble } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getHomestay, searchAvailability } from '../../api/homestays';
 import { Button } from '../../components/ui/Button';
@@ -11,6 +11,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
 import ReviewSection from '../../components/ReviewSection';
+import { optimizeImageUrl } from '../../lib/utils';
 
 export default function RoomDetailPage() {
   const { slug, roomTypeId } = useParams();
@@ -33,6 +34,9 @@ export default function RoomDetailPage() {
   const [quantity, setQuantity] = useState(initialQuantity);
   const [availableCount, setAvailableCount] = useState(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const checkInRef = useRef(null);
+  const checkOutRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -68,8 +72,9 @@ export default function RoomDetailPage() {
   const maxRooms = availableRooms.length;
   const heroImage = rooms.find((room) => room.main_image)?.main_image || homestay?.thumbnail || '';
   const nights = calculateNights(checkIn, checkOut);
-  const effectiveAvailableCount = checkIn && checkOut ? (availableCount ?? 0) : maxRooms;
-  const canCheckout = !!checkIn && !!checkOut && nights > 0 && effectiveAvailableCount > 0;
+  const hasDateRange = !!checkIn && !!checkOut && nights > 0;
+  const effectiveAvailableCount = hasDateRange ? (availableCount ?? 0) : maxRooms;
+  const checkoutDisabled = availabilityLoading || (hasDateRange ? effectiveAvailableCount < 1 : maxRooms < 1);
 
   useEffect(() => {
     if (!homestay?.id || !roomType || !checkIn || !checkOut) {
@@ -134,9 +139,51 @@ export default function RoomDetailPage() {
   }
 
   function handleCheckout() {
-    if (!canCheckout || !roomType || !homestay) return;
+    if (!roomType || !homestay) return;
+
+    setBookingError('');
+
+    if (!checkIn) {
+      setBookingError('Vui lòng chọn ngày nhận phòng trước khi tiếp tục.');
+      window.requestAnimationFrame(() => checkInRef.current?.focus?.());
+      return;
+    }
+
+    if (!checkOut) {
+      setBookingError('Vui lòng chọn ngày trả phòng trước khi tiếp tục.');
+      window.requestAnimationFrame(() => checkOutRef.current?.focus?.());
+      return;
+    }
+
+    if (nights <= 0) {
+      setBookingError('Ngày trả phòng phải sau ngày nhận phòng.');
+      window.requestAnimationFrame(() => checkOutRef.current?.focus?.());
+      return;
+    }
+
+    if (effectiveAvailableCount < 1) {
+      setBookingError('Phòng này hiện không còn khả dụng trong khoảng thời gian bạn chọn.');
+      return;
+    }
+
+    const bookingIntent = buildBookingIntent();
+
+    if (!isAuthenticated) {
+      navigate('/login', {
+        state: {
+          from: {
+            pathname: '/booking',
+            state: bookingIntent,
+          },
+          bookingIntent,
+          message: 'Đăng nhập để tiếp tục giữ phòng và thanh toán.',
+        },
+      });
+      return;
+    }
+
     navigate('/booking', {
-      state: buildBookingIntent(),
+      state: bookingIntent,
     });
   }
 
@@ -192,7 +239,15 @@ export default function RoomDetailPage() {
               <div className="overflow-hidden rounded-[36px] border border-border shadow-[0_24px_70px_rgba(15,23,42,0.12)] bg-white">
                 <div className="relative h-[320px] sm:h-[420px]">
                   {heroImage ? (
-                    <img src={heroImage} alt={roomType.name} className="h-full w-full object-cover" />
+                    <img
+                      src={optimizeImageUrl(heroImage, 1440)}
+                      alt={roomType.name}
+                      className="h-full w-full object-cover"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
+                      sizes="(min-width: 1024px) 56vw, 100vw"
+                    />
                   ) : (
                     <ImagePlaceholder name={roomType.name} className="h-full w-full" size="lg" />
                   )}
@@ -203,9 +258,7 @@ export default function RoomDetailPage() {
                       Phòng chi tiết
                     </Badge>
                     {roomType.rooms_count != null && (
-                      <Badge className="bg-black/45 text-white border-0 backdrop-blur-sm">
-                        Còn {checkIn && checkOut ? (effectiveAvailableCount || 0) : maxRooms} phòng
-                      </Badge>
+                      <AvailabilityBadge count={hasDateRange ? (effectiveAvailableCount || 0) : maxRooms} />
                     )}
                   </div>
                 </div>
@@ -215,7 +268,14 @@ export default function RoomDetailPage() {
                 {availableRooms.slice(0, 3).map((room) => (
                   <div key={room.id} className="overflow-hidden rounded-2xl border border-border bg-surface-container-low h-24">
                     {room.main_image ? (
-                      <img src={room.main_image} alt={room.room_code || roomType.name} className="h-full w-full object-cover" />
+                      <img
+                        src={optimizeImageUrl(room.main_image, 360)}
+                        alt={room.room_code || roomType.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                        sizes="(min-width: 1024px) 220px, 33vw"
+                      />
                     ) : (
                       <ImagePlaceholder name={room.room_code || roomType.name} className="h-full w-full" size="sm" />
                     )}
@@ -290,18 +350,26 @@ export default function RoomDetailPage() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-on-surface-variant">Ngày nhận phòng</label>
                       <Input
+                        ref={checkInRef}
                         type="date"
                         value={checkIn}
-                        onChange={(e) => setCheckIn(e.target.value)}
+                        onChange={(e) => {
+                          setCheckIn(e.target.value);
+                          setBookingError('');
+                        }}
                         min={today()}
                       />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-on-surface-variant">Ngày trả phòng</label>
                       <Input
+                        ref={checkOutRef}
                         type="date"
                         value={checkOut}
-                        onChange={(e) => setCheckOut(e.target.value)}
+                        onChange={(e) => {
+                          setCheckOut(e.target.value);
+                          setBookingError('');
+                        }}
                         min={checkIn || today()}
                       />
                     </div>
@@ -338,6 +406,11 @@ export default function RoomDetailPage() {
                       Phòng này hiện không còn khả dụng trong khoảng thời gian bạn chọn.
                     </div>
                   )}
+                  {bookingError && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {bookingError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-[28px] border border-dashed border-primary/25 bg-primary/5 p-4 space-y-2">
@@ -362,13 +435,17 @@ export default function RoomDetailPage() {
                 <Button
                   className="w-full"
                   onClick={handleCheckout}
-                  disabled={!canCheckout}
+                  disabled={checkoutDisabled}
                 >
                   Tiếp tục thanh toán
                 </Button>
                 <p className="text-xs text-center text-on-surface-variant flex items-center justify-center gap-2">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  Cần chọn đủ ngày nhận và trả phòng để tiếp tục
+                  {hasDateRange
+                    ? isAuthenticated
+                      ? 'Phòng sẽ được giữ trong 15 phút sau khi tạo đơn'
+                      : 'Đăng nhập để giữ phòng và thanh toán'
+                    : 'Bấm tiếp tục để hệ thống nhắc ngày còn thiếu'}
                 </p>
               </CardFooter>
             </Card>
@@ -409,6 +486,15 @@ export default function RoomDetailPage() {
 
         <ReviewSection homestaySlug={slug} />
       </div>
+    </div>
+  );
+}
+
+function AvailabilityBadge({ count }) {
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-emerald-950 bg-emerald-900 px-3 py-1 text-xs font-extrabold text-white shadow-sm">
+      <BedDouble className="h-3.5 w-3.5 text-white" />
+      Còn <span className="text-sm leading-none text-white">{count}</span> phòng trống
     </div>
   );
 }

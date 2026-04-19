@@ -10,7 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         // Extend booking status enum
-        DB::statement("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','pending_payment','payment_review','confirmed','checked_in','checked_out','cancelled','expired') DEFAULT 'pending'");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','pending_payment','payment_review','confirmed','checked_in','checked_out','cancelled','expired') DEFAULT 'pending'");
+        }
 
         Schema::table('bookings', function (Blueprint $table) {
             $table->timestamp('confirmed_at')->nullable()->after('expires_at');
@@ -19,7 +21,9 @@ return new class extends Migration
         });
 
         // Extend payment status enum
-        DB::statement("ALTER TABLE payments MODIFY COLUMN status ENUM('pending','proof_uploaded','success','failed','refunded','expired') DEFAULT 'pending'");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE payments MODIFY COLUMN status ENUM('pending','proof_uploaded','success','failed','refunded','expired') DEFAULT 'pending'");
+        }
 
         Schema::table('payments', function (Blueprint $table) {
             $table->string('transfer_content', 100)->nullable()->after('status');
@@ -42,12 +46,16 @@ return new class extends Migration
             ]);
         });
 
-        DB::statement("ALTER TABLE payments MODIFY COLUMN status ENUM('pending','success','failed','refunded') DEFAULT 'pending'");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE payments MODIFY COLUMN status ENUM('pending','success','failed','refunded') DEFAULT 'pending'");
+        }
 
         Schema::table('bookings', function (Blueprint $table) {
             $table->dropColumn(['confirmed_at', 'cancelled_at', 'cancel_reason']);
         });
 
-        DB::statement("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','confirmed','checked_in','checked_out','cancelled') DEFAULT 'pending'");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','confirmed','checked_in','checked_out','cancelled') DEFAULT 'pending'");
+        }
     }
 };

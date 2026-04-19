@@ -27,7 +27,7 @@ class BookingSeeder extends Seeder
         // Nhóm 1: Booking PENDING (chờ xác nhận) — 3 booking
         // ================================================================
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Nẵng",
+            'homestay_name' => "Duly's House Đội Cấn",
             'room_type_name' => 'Standard',
             'customer_idx' => 0,
             'check_in' => Carbon::now()->addDays(5),
@@ -40,8 +40,8 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Phú Quốc",
-            'room_type_name' => 'Pool Villa',
+            'homestay_name' => "Duly's House Yên Hoa",
+            'room_type_name' => 'Two-Bedroom Suite',
             'customer_idx' => 2,
             'check_in' => Carbon::now()->addDays(14),
             'check_out' => Carbon::now()->addDays(17),
@@ -54,7 +54,7 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Lạt",
+            'homestay_name' => "Duly's House Nguyễn Chí Thanh",
             'room_type_name' => 'Dorm (4 giường)',
             'customer_idx' => 4,
             'check_in' => Carbon::now()->addDays(10),
@@ -71,8 +71,8 @@ class BookingSeeder extends Seeder
         // Nhóm 2: Booking CONFIRMED (đã xác nhận, chưa check-in) — 3 booking
         // ================================================================
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Nẵng",
-            'room_type_name' => 'Deluxe Sea View',
+            'homestay_name' => "Duly's House Đội Cấn",
+            'room_type_name' => 'Deluxe City View',
             'customer_idx' => 1,
             'check_in' => Carbon::now()->addDays(1),
             'check_out' => Carbon::now()->addDays(4),
@@ -85,8 +85,8 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Hội An",
-            'room_type_name' => 'Heritage Suite',
+            'homestay_name' => "Duly's House Âu Cơ",
+            'room_type_name' => 'Lake Breeze Suite',
             'customer_idx' => 3,
             'check_in' => Carbon::now()->addDays(2),
             'check_out' => Carbon::now()->addDays(5),
@@ -98,8 +98,8 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Phú Quốc",
-            'room_type_name' => 'Bungalow Beach Front',
+            'homestay_name' => "Duly's House Yên Hoa",
+            'room_type_name' => 'Studio Balcony',
             'customer_idx' => 5, // walk-in customer
             'check_in' => Carbon::now()->addDays(3),
             'check_out' => Carbon::now()->addDays(6),
@@ -115,7 +115,7 @@ class BookingSeeder extends Seeder
         // Nhóm 3: Booking CHECKED_IN (đang ở) — 3 booking
         // ================================================================
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Nẵng",
+            'homestay_name' => "Duly's House Đội Cấn",
             'room_type_name' => 'Family Room',
             'customer_idx' => 0,
             'check_in' => Carbon::now()->subDay(),
@@ -128,7 +128,7 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Hội An",
+            'homestay_name' => "Duly's House Âu Cơ",
             'room_type_name' => 'Standard',
             'customer_idx' => 6, // walk-in
             'check_in' => Carbon::now(),
@@ -141,8 +141,8 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Lạt",
-            'room_type_name' => 'Deluxe Pine View',
+            'homestay_name' => "Duly's House Nguyễn Chí Thanh",
+            'room_type_name' => 'Deluxe Avenue View',
             'customer_idx' => 2,
             'check_in' => Carbon::now()->subDays(2),
             'check_out' => Carbon::now()->addDay(),
@@ -157,7 +157,7 @@ class BookingSeeder extends Seeder
         // Nhóm 4: Booking CHECKED_OUT (đã trả phòng) — 3 booking
         // ================================================================
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Nẵng",
+            'homestay_name' => "Duly's House Đội Cấn",
             'room_type_name' => 'VIP Suite',
             'customer_idx' => 3,
             'check_in' => Carbon::now()->subDays(5),
@@ -170,8 +170,8 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Phú Quốc",
-            'room_type_name' => 'Family Bungalow',
+            'homestay_name' => "Duly's House Yên Hoa",
+            'room_type_name' => 'Family Studio',
             'customer_idx' => 1,
             'check_in' => Carbon::now()->subDays(7),
             'check_out' => Carbon::now()->subDays(4),
@@ -183,7 +183,7 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Hội An",
+            'homestay_name' => "Duly's House Âu Cơ",
             'room_type_name' => 'Deluxe Garden',
             'customer_idx' => 4,
             'check_in' => Carbon::now()->subDays(10),
@@ -199,7 +199,7 @@ class BookingSeeder extends Seeder
         // Nhóm 5: Booking CANCELLED — 2 booking
         // ================================================================
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Nẵng",
+            'homestay_name' => "Duly's House Đội Cấn",
             'room_type_name' => 'Standard',
             'customer_idx' => 4,
             'check_in' => Carbon::now()->addDays(20),
@@ -212,7 +212,7 @@ class BookingSeeder extends Seeder
         ]);
 
         $this->createBooking($customers, $homestays, [
-            'homestay_name' => "Duly's House Đà Lạt",
+            'homestay_name' => "Duly's House Nguyễn Chí Thanh",
             'room_type_name' => 'Penthouse',
             'customer_idx' => 3,
             'check_in' => Carbon::now()->addDays(8),

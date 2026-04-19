@@ -55,21 +55,33 @@ export function WhyChooseUs() {
                 className="rounded-[32px] h-48 w-full object-cover"
                 alt="Professional hotel bed with plush pillows"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCu8UgXamezcAS0CDPbXYSP51xB1elcB9Cyuiyb_0XwcpZd2Kj-61z1pTU0OsCOQ6ZJ2XpafXqeUJH7dzMdRUUoAWO4gHA1epNMPg5U4SWvVf9SY87ru4lgzir309mrV-iRqOT_6cl5LagGYXzVY3Q7voqy3zG8HvKuDGWUIz18Uaft3CY_m5h6m6B47O4kGuA1B9--UmBnTj2AXuZ7L_2VhSuzyoCEhxBC4eouNUftmQkKcPccwTT_BdepwmZmREXKRpqKCC6fWsw9"
+                loading="lazy"
+                decoding="async"
+                sizes="(min-width: 768px) 240px, 50vw"
               />
               <img
                 className="rounded-[32px] h-48 w-full object-cover mt-8"
                 alt="High-end organic bathroom amenities"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8Ugf9d2jc-lNn4AHlM9YnxmM3YE1MSJcY6v5KrpoAJQAYKPQe7srIubaDlN-CJx0egGnR8cj3sLFjUyu7BMcvqyzNy-8snZ72rqRwMAt3TwkxqEtGuWWLisqtVppHLSFFT8WFC76g41GiBOF0T3RLV_rK9XRs035qHp0q5Mq9UfKQIWimirBajAd25nfQsFcPNUFCRE3NSW_J_K3eVIe36ApIaWlq4eoqWB3qG6z-pyKdz6AmnfWTrHQmeqdwWD4dEZISfjB0sD5l"
+                loading="lazy"
+                decoding="async"
+                sizes="(min-width: 768px) 240px, 50vw"
               />
               <img
                 className="rounded-[32px] h-48 w-full object-cover -mt-8"
                 alt="Curated breakfast platter with fresh fruits"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfhjnXJ7S801uD01hYRVYavcrQFYPnfpQbHlimVRi2ETG9wNK8O05Gs9RP9Upp6IdOKjDTCp0NCGz6j7fYeuWIsneME8_5s1eyyHmIpajVZFhB0lXCScxPwVycwaOc44GPDXVOArJJ-rRwOvRFH0CABO0Nv-66EqkPFOeJ9-x4MjTqGrVJHXO3zxhsl6qbtLkP7wP-B105GF0p_w1Mg9gnQaVP6J8Pc0vmOGoyCHseENqNKJRUIxNWd0i0l1vEVjkGnof5jZn51KWC"
+                loading="lazy"
+                decoding="async"
+                sizes="(min-width: 768px) 240px, 50vw"
               />
               <img
                 className="rounded-[32px] h-48 w-full object-cover"
                 alt="Warm interior lighting of a living room"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdtnqUKHTLiQJIYX4VGNZnB0WXHOi1IMzbtNuvxjcpVUTqoqeEwNMzp4rTw5b1s2koRF-2WfJj_c9Q8fPJbrIzHFVKbGR8z_hYhyfpXCIAzq19Ca9qZqaUd8RVeoMJM3rwbO-ZE8etlzr0g0s4enSfeMFkkdnhQhQOIccHl8qIhLiRnWkzOxFPw_1vH6fF3_Te2AaPPNkgkltKX0ifTJOuLVXHjn5xkbe2oO9P9J0yrzU9W1_j8u7rGF_z0DC4a4mV12czboehVhrq"
+                loading="lazy"
+                decoding="async"
+                sizes="(min-width: 768px) 240px, 50vw"
               />
             </div>
           </div>

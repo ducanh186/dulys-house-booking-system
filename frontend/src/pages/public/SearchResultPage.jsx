@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
-import { cn } from '../../lib/utils';
+import { cn, optimizeImageUrl } from '../../lib/utils';
 
 export default function SearchResultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -297,7 +297,14 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut, gu
       <div className="flex items-start gap-4 p-5 border-b border-border bg-surface-container-low">
         <div className="h-16 w-16 rounded-lg shrink-0 overflow-hidden">
           {homestay.thumbnail ? (
-            <img src={homestay.thumbnail} alt={homestay.name} className="h-full w-full object-cover" />
+            <img
+              src={optimizeImageUrl(homestay.thumbnail, 160)}
+              alt={homestay.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              sizes="64px"
+            />
           ) : (
             <ImagePlaceholder name={homestay.name} className="h-full w-full rounded-lg" size="sm" />
           )}
@@ -324,9 +331,7 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut, gu
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-on-surface">{rt.name}</span>
-                <Badge variant="secondary">
-                  Còn {rt.available_count} phòng
-                </Badge>
+                <AvailabilityBadge count={rt.available_count} />
               </div>
               <div className="flex items-center gap-4 mt-1 text-sm text-on-surface-variant">
                 <span className="flex items-center gap-1">
@@ -360,13 +365,29 @@ function SearchResultGroup({ homestay, availableRoomTypes, checkIn, checkOut, gu
   );
 }
 
+function AvailabilityBadge({ count }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-950 bg-emerald-900 px-3 py-1 text-xs font-extrabold text-white shadow-sm">
+      <BedDouble className="h-3.5 w-3.5 text-white" />
+      Còn <span className="text-sm leading-none text-white">{count}</span> phòng trống
+    </span>
+  );
+}
+
 function HomestayCard({ homestay }) {
   return (
     <Link to={`/homestays/${homestay.slug}`}>
       <Card className="h-full hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group overflow-hidden">
         <div className="h-48 rounded-t-[32px] overflow-hidden relative">
           {homestay.thumbnail ? (
-            <img src={homestay.thumbnail} alt={homestay.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" />
+            <img
+              src={optimizeImageUrl(homestay.thumbnail, 640)}
+              alt={homestay.name}
+              className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+              loading="lazy"
+              decoding="async"
+              sizes="(min-width: 1024px) 320px, (min-width: 640px) 50vw, 100vw"
+            />
           ) : (
             <ImagePlaceholder name={homestay.name} className="h-full w-full" size="lg" />
           )}

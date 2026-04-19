@@ -5,6 +5,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import StatusBadge from '../../components/common/StatusBadge';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
+import { optimizeImageUrl } from '../../lib/utils';
 
 export default function BookingSuccessPage() {
   const location = useLocation();
@@ -62,7 +63,14 @@ export default function BookingSuccessPage() {
             <Card className="overflow-hidden border-border shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
               <div className="h-44 overflow-hidden">
                 {roomImage ? (
-                  <img src={roomImage} alt={roomTypeName || homestayName} className="h-full w-full object-cover" />
+                  <img
+                    src={optimizeImageUrl(roomImage, 720)}
+                    alt={roomTypeName || homestayName}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    sizes="(min-width: 1024px) 460px, 100vw"
+                  />
                 ) : (
                   <ImagePlaceholder name={roomTypeName || homestayName} className="h-full w-full" size="lg" />
                 )}
@@ -119,7 +127,9 @@ export default function BookingSuccessPage() {
   );
 }
 
-function InfoRow({ label, value, icon: Icon }) {
+function InfoRow({ label, value, icon }) {
+  const Icon = icon;
+
   return (
     <div className="flex items-start gap-3">
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white border border-border">

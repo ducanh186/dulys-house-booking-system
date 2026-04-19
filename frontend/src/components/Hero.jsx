@@ -74,6 +74,10 @@ export function Hero() {
               className="w-full h-full object-cover"
               alt="Modern cabin in a forest with large windows"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJ8XW5EDxtdcRZgSyyd6SkF3F0zMse4z6zIGhEMaCXwJJiK4TQNF2IsGh3VtL4R651hGtQlw-lhPuOlBTR2DVIyPkz_Y8Ss0LD9CItPLFt4lhw51w-L__VccPTYcNyj4rwkFTXFDF7q74GUxdYThqAkP4WfnfUWRVVmgxRizDjmhPV0ICDj4gR4CX8rOeZwrrF6F8MjD7KEwhGIEdXJiv_4yzp1a0xUUtWy3c92-KDrmM_6jR6pfBlIhFse_BrKoWz_G1a5kCP3VsB"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              sizes="(min-width: 1024px) 50vw, 100vw"
             />
           </div>
           <div className="absolute -bottom-6 -left-6 bg-tertiary-container p-6 rounded-[32px] shadow-xl max-w-[200px]">
