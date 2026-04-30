@@ -61,6 +61,59 @@ class BookingInventoryTest extends TestCase
         $this->assertSame('pending_payment', $retry->json('data.status'));
     }
 
+    public function test_booking_can_reserve_date_available_room_without_overwriting_current_room_status(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $homestay = $this->createHomestay();
+        $roomType = $this->createRoomType($homestay);
+        $room = $this->createRoom($roomType, 'P111', [
+            'status' => 'occupied',
+            'cleanliness' => 'clean',
+        ]);
+
+        $payload = [
+            'check_in' => now()->addDays(10)->toDateString(),
+            'check_out' => now()->addDays(12)->toDateString(),
+            'guest_count' => 1,
+            'customer_name' => 'Le Thi Test',
+            'customer_phone' => '0988888888',
+            'customer_email' => 'guest@example.com',
+            'rooms' => [
+                [
+                    'room_type_id' => $roomType->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ];
+
+        $response = $this->postJson('/api/bookings', $payload)
+            ->assertCreated();
+
+        $booking = Booking::with('details.assignedRooms')->findOrFail($response->json('data.id'));
+
+        $this->assertSame([$room->id], $booking->details->first()->assignedRooms->pluck('id')->all());
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'status' => 'occupied',
+            'cleanliness' => 'clean',
+        ]);
+
+        $booking->update(['expires_at' => now()->subMinute()]);
+        app(\App\Services\BookingExpiryService::class)->expirePendingBookings();
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('rooms', [
+            'id' => $room->id,
+            'status' => 'occupied',
+            'cleanliness' => 'clean',
+        ]);
+    }
+
     public function test_admin_check_in_assigns_all_reserved_rooms_and_check_out_releases_them(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

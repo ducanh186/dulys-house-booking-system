@@ -14,13 +14,16 @@ class RoomReservationService
         $booking->loadMissing('details.assignedRooms');
 
         foreach ($booking->details as $detail) {
-            if ($detail->assignedRooms->count() >= $detail->quantity) {
+            $reservedCount = $detail->assignedRooms->count();
+
+            if ($reservedCount >= $detail->quantity) {
                 continue;
             }
 
+            $remainingQuantity = $detail->quantity - $reservedCount;
             $rooms = Room::query()
                 ->where('room_type_id', $detail->room_type_id)
-                ->where('status', 'available')
+                ->whereIn('status', ['available', 'locked', 'booked', 'occupied'])
                 ->where('cleanliness', 'clean')
                 ->whereDoesntHave('assignedBookingDetails.booking', function ($query) use ($booking) {
                     $query
@@ -28,10 +31,10 @@ class RoomReservationService
                         ->overlapping($booking->check_in, $booking->check_out);
                 })
                 ->orderBy('room_code')
-                ->limit($detail->quantity)
+                ->limit($remainingQuantity)
                 ->get();
 
-            if ($rooms->count() < $detail->quantity) {
+            if ($rooms->count() < $remainingQuantity) {
                 throw new \RuntimeException('Không thể khóa đủ số lượng phòng cho đơn đặt phòng này.');
             }
 
@@ -39,6 +42,7 @@ class RoomReservationService
             $detail->update(['room_id' => $rooms->first()?->id]);
 
             Room::whereIn('id', $rooms->pluck('id'))
+                ->where('status', 'available')
                 ->update(['status' => 'locked', 'cleanliness' => 'clean']);
         }
     }
@@ -55,7 +59,7 @@ class RoomReservationService
 
     public function markBookingRoomsAvailable(Booking $booking, string $cleanliness = 'clean'): void
     {
-        $this->transitionAssignedRooms($booking, 'available', ['locked', 'booked', 'occupied'], $cleanliness);
+        $this->transitionAssignedRooms($booking, 'available', ['locked', 'booked'], $cleanliness);
     }
 
     public function reservedRoomsForDetail(BookingDetail $detail): Collection
@@ -63,7 +67,7 @@ class RoomReservationService
         $detail->loadMissing('assignedRooms');
 
         return $detail->assignedRooms
-            ->whereIn('status', ['locked', 'booked'])
+            ->where('status', '!=', 'maintenance')
             ->values();
     }
 
