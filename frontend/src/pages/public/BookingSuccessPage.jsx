@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Calendar, BedDouble, Hash, Home, Users, CreditCard, ShieldCheck, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Calendar, BedDouble, Hash, Home, Users, CreditCard, ShieldCheck, Sparkles, ArrowRight, CheckCircle2, QrCode, ReceiptText } from 'lucide-react';
 import { getBooking } from '../../api/bookings';
 import { Card, CardContent } from '../../components/ui/Card';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -8,6 +8,8 @@ import PriceDisplay from '../../components/common/PriceDisplay';
 import StatusBadge from '../../components/common/StatusBadge';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
 import { optimizeImageUrl } from '../../lib/utils';
+
+const CONFIRMED_SUCCESS_VARIANTS = new Set(['payment_confirmed', 'booking_confirmed']);
 
 export default function BookingSuccessPage() {
   const location = useLocation();
@@ -72,7 +74,137 @@ export default function BookingSuccessPage() {
   const roomTypeName = state?.roomTypeName || booking.details?.[0]?.room_type?.name || 'Loại phòng';
   const roomImage = state?.roomImage || booking.homestay?.thumbnail || '';
   const paymentMethod = state?.paymentMethod || booking.payments?.[0]?.method || 'transfer';
+  const payment = booking.payments?.[0] || null;
   const detailPath = `/my-profile/bookings/${booking.id}`;
+  const successVariant = state?.successVariant || searchParams.get('event') || '';
+  const isConfirmedExperience = CONFIRMED_SUCCESS_VARIANTS.has(successVariant);
+  const supportPhone = booking.homestay?.hotline || '0123 456 789';
+  const supportEmail = booking.homestay?.email || 'support@dulyshouse.vn';
+
+  if (isConfirmedExperience) {
+    const nextSteps = buildConfirmationSteps({ booking, supportPhone, supportEmail });
+
+    return (
+      <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf4_0%,#fffefb_36%,#f7fbff_100%)]">
+        <div className="max-w-4xl mx-auto px-4 py-10 sm:py-14">
+          <Card className="overflow-hidden border-[#f6dcc7] bg-white shadow-[0_24px_80px_rgba(249,115,22,0.12)]">
+            <CardContent className="p-6 sm:p-8 lg:p-10">
+              <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-full bg-[#fff1e6] ring-8 ring-[#fff6ef]">
+                <CheckCircle2 className="h-9 w-9 text-[#f97316]" strokeWidth={2.2} />
+              </div>
+
+              <div className="mt-5 text-center">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ffd8bf] bg-[#fff5ec] px-4 py-2 text-sm font-semibold text-[#c2410c]">
+                  <Sparkles className="h-4 w-4" />
+                  Đơn đặt phòng đã được xác nhận
+                </div>
+                <h1 className="mt-4 font-headline text-3xl font-extrabold text-on-surface sm:text-4xl">
+                  Cảm ơn bạn đã đặt phòng!
+                </h1>
+                <p className="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
+                  Mã đặt phòng của bạn: <span className="font-semibold text-[#ea580c]">{booking.booking_code}</span>
+                </p>
+              </div>
+
+              <div className="mt-8 grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+                <div className="rounded-[32px] border border-[#ffe0cc] bg-[#fff7f2] p-5">
+                  <p className="text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-[#ea580c]">
+                    Mã QR xác nhận
+                  </p>
+                  <div className="mt-5 flex min-h-[280px] items-center justify-center rounded-[28px] border border-white bg-white p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                    {payment?.qr_payload ? (
+                      <img
+                        src={payment.qr_payload}
+                        alt={`Mã QR đơn ${booking.booking_code}`}
+                        className="h-56 w-56 rounded-[24px] border border-border object-contain"
+                        loading="eager"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div className="flex w-full max-w-[220px] flex-col items-center gap-4 rounded-[26px] border border-dashed border-[#fdba74] bg-[#fffaf7] px-6 py-8 text-center">
+                        <span className="inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#fff1e6] text-[#f97316]">
+                          <QrCode className="h-8 w-8" />
+                        </span>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.22em] text-on-surface-variant">Mã đơn</p>
+                          <p className="mt-2 font-headline text-2xl font-bold text-on-surface">{booking.booking_code}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-4 text-center text-sm leading-6 text-on-surface-variant">
+                    Vui lòng lưu lại thông tin đơn để đối chiếu khi làm thủ tục tại homestay.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-[32px] border border-border bg-white p-5">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                      <ReceiptText className="h-4 w-4 text-primary" />
+                      Thông tin nhanh
+                    </div>
+                    <div className="mt-4 space-y-3 rounded-[28px] bg-surface-container-low p-4">
+                      <ConfirmationSummaryRow icon={Home} label="Homestay" value={homestayName} />
+                      <ConfirmationSummaryRow icon={BedDouble} label="Loại phòng" value={roomTypeName} />
+                      <ConfirmationSummaryRow icon={Calendar} label="Nhận phòng" value={formatDate(booking.check_in_date)} />
+                      <ConfirmationSummaryRow icon={CreditCard} label="Thanh toán" value={formatPaymentMethod(paymentMethod)} />
+                      <ConfirmationSummaryRow
+                        icon={Hash}
+                        label="Tổng tiền"
+                        value={<PriceDisplay amount={booking.total_amount} className="font-semibold text-on-surface" />}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-[32px] border border-[#d8e8f9] bg-[#f8fcff] p-5">
+                    <p className="text-sm font-semibold text-on-surface">Các bước tiếp theo</p>
+                    <div className="mt-4 space-y-3">
+                      {nextSteps.map((step, index) => (
+                        <div key={step.title} className="flex items-start gap-3 rounded-[22px] border border-white bg-white px-4 py-3">
+                          <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fff1e6] text-[11px] font-bold text-[#ea580c]">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-on-surface">{step.title}</p>
+                            <p className="mt-1 text-sm leading-6 text-on-surface-variant">{step.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[32px] border border-[#dcfce7] bg-[#f0fdf4] p-5 text-sm text-on-surface-variant">
+                    <div className="flex items-start gap-3">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
+                      <p className="leading-6">
+                        Cần hỗ trợ ngay? Gọi <span className="font-semibold text-on-surface">{supportPhone}</span> hoặc email <span className="font-semibold text-on-surface">{supportEmail}</span>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  to={detailPath}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#f97316] px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  Xem đơn đặt của tôi
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/"
+                  className="inline-flex items-center justify-center rounded-full border border-input bg-[#eef4fb] px-6 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-[#e6eef8]"
+                >
+                  Về trang chủ
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -192,6 +324,39 @@ function InfoRow({ label, value, icon }) {
       </div>
     </div>
   );
+}
+
+function ConfirmationSummaryRow({ icon, label, value }) {
+  const Icon = icon;
+
+  return (
+    <div className="flex items-start gap-3">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-border bg-white">
+        <Icon className="h-4 w-4 text-on-surface-variant" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-on-surface-variant">{label}</p>
+        <div className="font-semibold text-on-surface">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function buildConfirmationSteps({ booking, supportPhone, supportEmail }) {
+  return [
+    {
+      title: 'Email xác nhận đã được gửi',
+      description: `Chúng tôi đã gửi email xác nhận cùng thông tin đơn ${booking.booking_code} để bạn tiện lưu lại.`,
+    },
+    {
+      title: 'Chuẩn bị cho ngày nhận phòng',
+      description: `Nhận phòng dự kiến vào ${formatDate(booking.check_in_date)}. Hãy mang theo thông tin đơn khi tới homestay.`,
+    },
+    {
+      title: 'Hỗ trợ khi cần',
+      description: `Nếu cần đổi lịch hoặc hỗ trợ thêm, liên hệ ${supportPhone} hoặc ${supportEmail}.`,
+    },
+  ];
 }
 
 function formatDate(dateStr) {

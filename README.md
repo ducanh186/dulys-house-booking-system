@@ -8,6 +8,9 @@ Hệ thống quản lý đặt phòng Homestay — Full-stack web application.
 
 Chỉ cần Docker, không cần cài PHP/Node/MySQL.
 
+> Chọn một chế độ chạy duy nhất cho mỗi phiên làm việc: `Docker` hoặc `Local Development`.
+> Nếu đang mở app bằng `docker compose`, hãy chạy toàn bộ lệnh Laravel qua `docker compose exec backend ...` thay vì `cd backend && php artisan ...`.
+
 ```bash
 # 1. Clone & start
 git clone <repo-url> && cd dulys-house-booking-system
@@ -22,15 +25,18 @@ docker compose exec backend php artisan migrate --seed
 ```
 
 > **Không cần tạo file `.env`** — `docker-compose.yml` đã cấu hình sẵn toàn bộ (DB, APP_KEY, cache...).
+>
+> **Quan trọng:** khi chạy Docker, backend trong container dùng MySQL service `mysql` với cấu hình lấy từ `docker-compose.yml`.
+> File `backend/.env` chỉ dành cho chế độ local. Nếu seed bằng lệnh host-side `php artisan` nhưng đang xem app từ Docker, dữ liệu có thể vào sai database và giao diện sẽ trông như “không có data”.
 
 ### Tài khoản mặc định (seeded)
 
 | Email | Mật khẩu | Vai trò |
-|---|---|---|
-| admin@dulyshouse.vn | password | Admin |
-| owner@dulyshouse.vn | password | Owner |
-| staff@dulyshouse.vn | password | Staff |
-| guest@dulyshouse.vn | password | Guest |
+| --- | --- | --- |
+| `admin@dulyshouse.vn` | password | Admin |
+| `owner@dulyshouse.vn` | password | Owner |
+| `staff@dulyshouse.vn` | password | Staff |
+| `guest@dulyshouse.vn` | password | Guest |
 
 ### Docker commands
 
@@ -40,8 +46,37 @@ docker compose down              # Stop
 docker compose logs -f backend   # Xem log backend
 docker compose exec backend php artisan migrate       # Chạy migration
 docker compose exec backend php artisan db:seed       # Seed lại data
+docker compose exec backend php artisan db:seed --class=ReviewSeeder  # Seed riêng dữ liệu review mẫu
 docker compose exec backend php artisan migrate:fresh --seed  # Reset DB hoàn toàn
 ```
+
+## Troubleshooting
+
+### Seed xong nhưng giao diện vẫn không thấy data
+
+Nguyên nhân thường gặp nhất là bạn đang trộn 2 môi trường:
+
+- Chạy app bằng `docker compose up`
+- Nhưng lại seed bằng `cd backend && php artisan ...`
+
+Hai lệnh đó có thể đang trỏ tới 2 database khác nhau.
+
+Khi chạy Docker, hãy dùng:
+
+```bash
+docker compose exec backend php artisan migrate --seed
+docker compose exec backend php artisan db:seed --class=ReviewSeeder
+```
+
+Khi chạy local, hãy dùng:
+
+```bash
+cd backend
+php artisan migrate --seed
+php artisan db:seed --class=ReviewSeeder
+```
+
+Sau khi seed đúng môi trường, tải lại frontend hoặc gọi lại API báo cáo để lấy dữ liệu mới.
 
 ## Local Development (không Docker)
 
@@ -53,6 +88,8 @@ docker compose exec backend php artisan migrate:fresh --seed  # Reset DB hoàn t
 - MySQL 8.x
 
 ### Backend
+
+`backend/.env` trong phần này chỉ áp dụng cho chế độ local, không áp dụng cho container Docker.
 
 ```bash
 cd backend
@@ -82,7 +119,7 @@ php artisan test --filter=AuthTest     # Một test class
 
 ## Cấu trúc dự án
 
-```
+```text
 ├── backend/          Laravel API (Sanctum auth, REST API)
 │   ├── app/
 │   │   ├── Http/Controllers/Api/     Controllers (thin)

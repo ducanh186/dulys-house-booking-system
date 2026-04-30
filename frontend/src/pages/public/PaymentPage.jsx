@@ -59,7 +59,13 @@ export default function PaymentPage() {
 
       if (updated.status === 'confirmed') {
         navigate('/booking/success', {
-          state: { booking: updated, homestayName, roomTypeName, paymentMethod: 'transfer' },
+          state: {
+            booking: updated,
+            homestayName,
+            roomTypeName,
+            paymentMethod: 'transfer',
+            successVariant: 'payment_confirmed',
+          },
           replace: true,
         });
       }

@@ -19,6 +19,8 @@ import {
   BedDouble,
   Building2,
   CalendarRange,
+  ChevronDown,
+  ChevronUp,
   Filter,
   Users2,
   TrendingUp,
@@ -115,6 +117,7 @@ export default function CustomerReportsPage() {
     room_id: '',
     rating: '',
   });
+  const [isReviewSectionExpanded, setIsReviewSectionExpanded] = useState(true);
   const [filterOptions, setFilterOptions] = useState({
     homestays: [],
     customers: [],
@@ -342,12 +345,34 @@ export default function CustomerReportsPage() {
                     Lọc phản hồi theo cơ sở, khách hàng, phòng và số sao đánh giá.
                   </p>
                 </div>
-                <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">
-                  {reviewSummary.total_reviews ?? 0} đánh giá
-                </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">
+                    {reviewSummary.total_reviews ?? 0} đánh giá
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsReviewSectionExpanded((prev) => !prev)}
+                    aria-expanded={isReviewSectionExpanded}
+                    className="gap-2 rounded-full"
+                  >
+                    {isReviewSectionExpanded ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Thu gọn
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Mở rộng
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-5 p-5 sm:p-6">
+            {isReviewSectionExpanded ? (
+              <CardContent className="space-y-5 p-5 sm:p-6">
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
@@ -509,7 +534,16 @@ export default function CustomerReportsPage() {
                   className="min-h-[220px]"
                 />
               )}
-            </CardContent>
+              </CardContent>
+            ) : (
+              <CardContent className="p-5 sm:p-6">
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+                  <span>Tổng phản hồi: <strong className="text-on-surface">{reviewSummary.total_reviews ?? 0}</strong></span>
+                  <span>Điểm TB: <strong className="text-on-surface">{Number(reviewSummary.average_rating || 0).toFixed(1)}</strong></span>
+                  <span>5 sao: <strong className="text-on-surface">{reviewSummary.rating_counts?.[5] ?? 0}</strong></span>
+                </div>
+              </CardContent>
+            )}
           </Card>
 
           <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
