@@ -7,6 +7,7 @@ use App\Models\BookingDetail;
 use App\Models\Customer;
 use App\Models\Homestay;
 use App\Models\Payment;
+use App\Models\Review;
 use App\Models\Room;
 use Carbon\Carbon;
 
@@ -105,6 +106,128 @@ class DashboardService
         }
 
         return $data;
+    }
+
+    public function getOccupancyDetailReport(?string $homestayId, Carbon $from, Carbon $to): array
+    {
+        $periodStart = $from->copy()->startOfDay();
+        $periodEnd = $to->copy()->startOfDay();
+        $periodEndExclusive = $periodEnd->copy()->addDay();
+        $periodDays = max(1, (int) $periodStart->diffInDays($periodEnd) + 1);
+
+        $rooms = Room::query()
+            ->with('roomType.homestay')
+            ->whereHas('roomType', function ($query) use ($homestayId) {
+                $query
+                    ->where('is_active', true)
+                    ->whereHas('homestay', fn ($homestayQuery) => $homestayQuery->where('is_active', true));
+
+                if ($homestayId) {
+                    $query->where('homestay_id', $homestayId);
+                }
+            })
+            ->orderBy('room_code')
+            ->get();
+
+        $roomIds = $rooms->pluck('id');
+        $usedDaysByRoom = $roomIds->mapWithKeys(fn ($id) => [$id => 0])->all();
+        $bookingIdsByRoom = $roomIds->mapWithKeys(fn ($id) => [$id => []])->all();
+
+        if ($roomIds->isNotEmpty()) {
+            $details = BookingDetail::query()
+                ->with('booking', 'assignedRooms')
+                ->where(function ($query) use ($roomIds) {
+                    $query
+                        ->whereIn('room_id', $roomIds)
+                        ->orWhereHas('assignedRooms', fn ($roomQuery) => $roomQuery->whereIn('rooms.id', $roomIds));
+                })
+                ->whereHas('booking', fn ($query) => $query
+                    ->whereIn('status', ['confirmed', 'checked_in', 'checked_out'])
+                    ->where('check_in', '<', $periodEndExclusive)
+                    ->where('check_out', '>', $periodStart))
+                ->get();
+
+            foreach ($details as $detail) {
+                $booking = $detail->booking;
+                if (!$booking) {
+                    continue;
+                }
+
+                $bookingStart = $booking->check_in->copy()->startOfDay();
+                $bookingEnd = $booking->check_out->copy()->startOfDay();
+                $overlapStart = $bookingStart->greaterThan($periodStart) ? $bookingStart : $periodStart;
+                $overlapEnd = $bookingEnd->lessThan($periodEndExclusive) ? $bookingEnd : $periodEndExclusive;
+                $usedDays = max(0, (int) $overlapStart->diffInDays($overlapEnd));
+                if ($usedDays === 0) {
+                    continue;
+                }
+
+                $assignedRoomIds = $detail->assignedRooms->pluck('id');
+                if ($assignedRoomIds->isEmpty() && $detail->room_id) {
+                    $assignedRoomIds = collect([$detail->room_id]);
+                }
+
+                foreach ($assignedRoomIds as $roomId) {
+                    if (!array_key_exists($roomId, $usedDaysByRoom)) {
+                        continue;
+                    }
+
+                    $usedDaysByRoom[$roomId] += $usedDays;
+                    $bookingIdsByRoom[$roomId][$booking->id] = true;
+                }
+            }
+        }
+
+        $rows = $rooms->map(function (Room $room) use ($usedDaysByRoom, $bookingIdsByRoom, $periodDays) {
+            $usedDays = (int) ($usedDaysByRoom[$room->id] ?? 0);
+            $occupancy = $periodDays > 0 ? round(($usedDays / $periodDays) * 100, 1) : 0;
+            $bookingCount = count($bookingIdsByRoom[$room->id] ?? []);
+
+            return [
+                'homestay_id' => $room->roomType?->homestay?->id,
+                'homestay_name' => $room->roomType?->homestay?->name,
+                'room_type_id' => $room->room_type_id,
+                'room_type_name' => $room->roomType?->name,
+                'room_id' => $room->id,
+                'room_code' => $room->room_code,
+                'used_days' => $usedDays,
+                'period_days' => $periodDays,
+                'occupancy_rate' => $occupancy,
+                'booking_count' => $bookingCount,
+            ];
+        })->values();
+
+        $totalRooms = $rows->count();
+        $totalUsedDays = (int) $rows->sum('used_days');
+        $averageOccupancy = $totalRooms > 0
+            ? round(($totalUsedDays / ($totalRooms * $periodDays)) * 100, 1)
+            : 0;
+        $highestRoom = $rows->sortByDesc('occupancy_rate')->first();
+        $lowestRoom = $rows->sortBy('occupancy_rate')->first();
+
+        return [
+            'period' => [
+                'from' => $periodStart->toDateString(),
+                'to' => $periodEnd->toDateString(),
+            ],
+            'summary' => [
+                'total_rooms' => $totalRooms,
+                'period_days' => $periodDays,
+                'total_used_days' => $totalUsedDays,
+                'average_occupancy' => $averageOccupancy,
+                'highest_room' => $highestRoom ? [
+                    'room_code' => $highestRoom['room_code'],
+                    'room_type_name' => $highestRoom['room_type_name'],
+                    'occupancy_rate' => $highestRoom['occupancy_rate'],
+                ] : null,
+                'lowest_room' => $lowestRoom ? [
+                    'room_code' => $lowestRoom['room_code'],
+                    'room_type_name' => $lowestRoom['room_type_name'],
+                    'occupancy_rate' => $lowestRoom['occupancy_rate'],
+                ] : null,
+            ],
+            'rows' => $rows->all(),
+        ];
     }
 
     public function getCancellationReport(Carbon $from, Carbon $to): array
@@ -284,6 +407,84 @@ class DashboardService
                 ->values()
                 ->all(),
             'new_customers_timeseries' => $this->buildCustomerTimeseries($start, $end, $newCustomersPerDate),
+        ];
+    }
+
+    public function getReviewReport(Carbon $from, Carbon $to, array $filters = []): array
+    {
+        $start = $from->copy()->startOfDay();
+        $end = $to->copy()->endOfDay();
+
+        $query = Review::query()
+            ->with('customer', 'homestay', 'booking.details.room', 'booking.details.roomType', 'booking.details.assignedRooms')
+            ->whereBetween('created_at', [$start, $end]);
+
+        if (!empty($filters['homestay_id'])) {
+            $query->where('homestay_id', $filters['homestay_id']);
+        }
+
+        if (!empty($filters['customer_id'])) {
+            $query->where('customer_id', $filters['customer_id']);
+        }
+
+        if (!empty($filters['rating'])) {
+            $query->where('rating', (int) $filters['rating']);
+        }
+
+        if (!empty($filters['room_id'])) {
+            $roomId = $filters['room_id'];
+            $query->whereHas('booking.details', fn ($detailQuery) => $detailQuery
+                ->where('room_id', $roomId)
+                ->orWhereHas('assignedRooms', fn ($roomQuery) => $roomQuery->where('rooms.id', $roomId)));
+        }
+
+        $reviews = $query->latest()->get();
+        $ratingCounts = collect(range(1, 5))
+            ->mapWithKeys(fn ($rating) => [$rating => $reviews->where('rating', $rating)->count()])
+            ->all();
+
+        return [
+            'summary' => [
+                'total_reviews' => $reviews->count(),
+                'average_rating' => $reviews->count() > 0 ? round((float) $reviews->avg('rating'), 1) : 0,
+                'rating_counts' => $ratingCounts,
+            ],
+            'reviews' => $reviews->map(function (Review $review) {
+                $roomCodes = $review->booking?->details
+                    ?->flatMap(function (BookingDetail $detail) {
+                        $assigned = $detail->assignedRooms->pluck('room_code');
+                        if ($assigned->isNotEmpty()) {
+                            return $assigned;
+                        }
+
+                        return $detail->room?->room_code ? [$detail->room->room_code] : [];
+                    })
+                    ->unique()
+                    ->values()
+                    ->all() ?? [];
+
+                $roomTypeNames = $review->booking?->details
+                    ?->map(fn (BookingDetail $detail) => $detail->roomType?->name)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all() ?? [];
+
+                return [
+                    'id' => $review->id,
+                    'booking_id' => $review->booking_id,
+                    'booking_code' => $review->booking?->booking_code,
+                    'customer_id' => $review->customer_id,
+                    'customer_name' => $review->customer?->full_name,
+                    'homestay_id' => $review->homestay_id,
+                    'homestay_name' => $review->homestay?->name,
+                    'room_codes' => $roomCodes ?: ['Chưa gán phòng'],
+                    'room_type_names' => $roomTypeNames,
+                    'rating' => (int) $review->rating,
+                    'comment' => $review->comment,
+                    'created_at' => $review->created_at?->toISOString(),
+                ];
+            })->values()->all(),
         ];
     }
 

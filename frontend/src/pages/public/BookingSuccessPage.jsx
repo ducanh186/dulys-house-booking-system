@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Calendar, BedDouble, Hash, Home, Users, CreditCard, ShieldCheck, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { getBooking } from '../../api/bookings';
 import { Card, CardContent } from '../../components/ui/Card';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import PriceDisplay from '../../components/common/PriceDisplay';
 import StatusBadge from '../../components/common/StatusBadge';
 import ImagePlaceholder from '../../components/common/ImagePlaceholder';
@@ -10,18 +12,67 @@ import { optimizeImageUrl } from '../../lib/utils';
 export default function BookingSuccessPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const state = location.state;
+  const stateBooking = state?.booking || null;
+  const bookingId = searchParams.get('booking_id');
+  const [booking, setBooking] = useState(stateBooking);
+  const [loading, setLoading] = useState(!stateBooking && !!bookingId);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!state?.booking) {
-      navigate('/my-profile/bookings', { replace: true });
+    if (stateBooking) {
+      return;
     }
-  }, [state, navigate]);
 
-  if (!state?.booking) return null;
+    if (!bookingId) {
+      navigate('/my-profile/bookings', { replace: true });
+      return;
+    }
 
-  const { booking, homestayName, roomTypeName, roomImage, paymentMethod } = state;
+    let active = true;
+    getBooking(bookingId)
+      .then((res) => {
+        if (active) setBooking(res.data || null);
+      })
+      .catch((err) => {
+        if (active) setError(err?.message || 'Không thể tải thông tin đặt phòng.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [stateBooking, bookingId, navigate]);
+
+  if (loading) return <LoadingSpinner fullScreen />;
+
+  if (error || !booking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card className="max-w-lg w-full">
+          <CardContent className="space-y-4 p-6 text-center">
+            <p className="font-semibold text-on-surface">{error || 'Không tìm thấy thông tin đặt phòng.'}</p>
+            <Link
+              to="/my-profile/bookings"
+              className="inline-flex items-center justify-center rounded-full border border-input bg-background px-5 py-2 text-sm font-semibold hover:bg-accent"
+            >
+              Về lịch sử đặt phòng
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const homestayName = state?.homestayName || booking.homestay?.name || booking.details?.[0]?.room_type?.homestay?.name || 'Duly’s House';
+  const roomTypeName = state?.roomTypeName || booking.details?.[0]?.room_type?.name || 'Loại phòng';
+  const roomImage = state?.roomImage || booking.homestay?.thumbnail || '';
+  const paymentMethod = state?.paymentMethod || booking.payments?.[0]?.method || 'transfer';
+  const detailPath = `/my-profile/bookings/${booking.id}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,10 +96,10 @@ export default function BookingSuccessPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
-                  to="/my-profile/bookings"
+                  to={detailPath}
                   className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-body h-10 px-6 py-2 sunlight-gradient text-white hover:opacity-90"
                 >
-                  Xem lịch sử đặt phòng
+                  Xem đơn đặt phòng
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link

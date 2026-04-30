@@ -8,6 +8,13 @@ export function getNotificationTarget(notification, role) {
   const bookingId = getNotificationBookingId(notification);
   if (!bookingId) return '';
 
-  const targetBase = ELEVATED_ROLES.has(role) ? '/admin/bookings' : '/my-profile/bookings';
-  return `${targetBase}?booking_id=${encodeURIComponent(bookingId)}`;
+  if (ELEVATED_ROLES.has(role)) {
+    return `/admin/bookings?booking_id=${encodeURIComponent(bookingId)}`;
+  }
+
+  if (notification?.type === 'payment_confirmed') {
+    return `/booking/success?booking_id=${encodeURIComponent(bookingId)}`;
+  }
+
+  return `/my-profile/bookings/${encodeURIComponent(bookingId)}`;
 }

@@ -100,8 +100,8 @@ export const rejectPayment = (paymentId, reason) =>
   client.patch(`/admin/payments/${paymentId}/reject`, { reason });
 
 // Customers
-export const getCustomers = (page = 1) =>
-  client.get('/admin/customers', { params: { page } });
+export const getCustomers = (page = 1, params = {}) =>
+  client.get('/admin/customers', { params: { page, ...params } });
 
 export const getCustomer = (id) =>
   client.get(`/admin/customers/${id}`);
@@ -143,6 +143,9 @@ export const deletePriceOverride = (id) =>
 export const getOccupancyReport = (params) =>
   client.get('/admin/reports/occupancy', { params });
 
+export const getOccupancyDetailReport = (params) =>
+  client.get('/admin/reports/occupancy-detail', { params });
+
 export const getCancellationReport = (params) =>
   client.get('/admin/reports/cancellations', { params });
 
@@ -151,3 +154,6 @@ export const getRevenueByHomestay = (params) =>
 
 export const getCustomerReports = (params) =>
   client.get('/admin/reports/customers', { params });
+
+export const getReviewReports = (params) =>
+  client.get('/admin/reports/reviews', { params });

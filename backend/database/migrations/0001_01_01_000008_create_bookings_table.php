@@ -16,7 +16,7 @@ return new class extends Migration
             $table->dateTime('check_in');
             $table->dateTime('check_out');
             $table->integer('guest_count')->default(1);
-            $table->enum('status', ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'pending_payment', 'payment_review', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'expired'])->default('pending');
             $table->decimal('total_amount', 12, 2);
             $table->decimal('deposit', 12, 2)->nullable();
             $table->text('notes')->nullable();

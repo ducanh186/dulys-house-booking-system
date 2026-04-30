@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('room_type_id')->constrained()->cascadeOnDelete();
             $table->string('room_code');
-            $table->enum('status', ['available', 'occupied', 'maintenance'])->default('available');
+            $table->enum('status', ['available', 'locked', 'booked', 'occupied', 'maintenance'])->default('available');
             $table->enum('cleanliness', ['clean', 'dirty', 'cleaning'])->default('clean');
             $table->text('notes')->nullable();
             $table->string('main_image')->nullable();

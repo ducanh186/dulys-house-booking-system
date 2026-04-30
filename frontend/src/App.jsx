@@ -16,6 +16,7 @@ import RoomDetailPage from './pages/public/RoomDetailPage';
 import BookingPage from './pages/public/BookingPage';
 import PaymentPage from './pages/public/PaymentPage';
 import BookingSuccessPage from './pages/public/BookingSuccessPage';
+import BookingDetailPage from './pages/public/BookingDetailPage';
 import MyBookingsPage from './pages/public/MyBookingsPage';
 import ReviewPage from './pages/public/ReviewPage';
 import AboutPage from './pages/public/AboutPage';
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/booking/success" element={<ProtectedRoute><BookingSuccessPage /></ProtectedRoute>} />
             <Route path="/my-profile" element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
             <Route path="/my-profile/bookings" element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
+            <Route path="/my-profile/bookings/:bookingId" element={<ProtectedRoute><BookingDetailPage /></ProtectedRoute>} />
             <Route path="/my-profile/bookings/:bookingId/review" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
             <Route
               path="/my-bookings"

@@ -120,9 +120,11 @@ Route::middleware(['auth:sanctum', 'active.internal'])->group(function () {
 
         // Reports
         Route::get('/reports/occupancy', [AdminReportController::class, 'occupancy']);
+        Route::get('/reports/occupancy-detail', [AdminReportController::class, 'occupancyDetail']);
         Route::get('/reports/cancellations', [AdminReportController::class, 'cancellations']);
         Route::get('/reports/revenue-by-homestay', [AdminReportController::class, 'revenueByHomestay']);
         Route::get('/reports/customers', [AdminReportController::class, 'customers']);
+        Route::get('/reports/reviews', [AdminReportController::class, 'reviews']);
     });
 
     // ─── Admin-only write operations ──────────────────────
