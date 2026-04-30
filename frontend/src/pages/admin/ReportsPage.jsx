@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   Bar,
@@ -79,6 +80,25 @@ function formatNumber(value, digits = 1) {
   });
 }
 
+function cleanupOccupancyPrintMode() {
+  if (typeof document === 'undefined') return;
+  document.body.classList.remove('printing-occupancy-report');
+}
+
+function scheduleOccupancyPrint() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+
+  document.body.classList.add('printing-occupancy-report');
+  window.addEventListener('afterprint', cleanupOccupancyPrintMode, { once: true });
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      window.print();
+      window.setTimeout(cleanupOccupancyPrintMode, 300);
+    });
+  });
+}
+
 function SummaryCard({ icon, label, value, hint }) {
   const Icon = icon;
   Icon;
@@ -152,13 +172,15 @@ export default function ReportsPage() {
     try {
       const response = await getOccupancyDetailReport({ from, to, homestay_id: homestayId || undefined });
       setPrintReport(response?.data ?? response ?? null);
-      window.setTimeout(() => window.print(), 80);
+      scheduleOccupancyPrint();
     } catch {
       setError('Không thể tải dữ liệu in báo cáo.');
     } finally {
       setPrinting(false);
     }
   }
+
+  useEffect(() => cleanupOccupancyPrintMode, []);
 
   useEffect(() => {
     loadReport();
@@ -592,9 +614,9 @@ function OccupancyPrintReport({ report, from, to }) {
     return null;
   }
 
-  return (
-    <section className="hidden print:block bg-white text-black">
-      <div className="mx-auto max-w-[980px] px-6 py-6 font-sans text-[12px]">
+  return createPortal(
+    <section className="occupancy-print-report hidden bg-white text-black" aria-hidden="true">
+      <div className="occupancy-print-page mx-auto max-w-[980px] px-6 py-6 font-sans text-[12px]">
         <div className="text-center">
           <p className="text-[10px] uppercase tracking-[0.28em] text-slate-500">Duly's House Manager</p>
           <h1 className="text-xl font-bold uppercase tracking-wide text-slate-800">Báo cáo hiệu suất phòng</h1>
@@ -629,17 +651,7 @@ function OccupancyPrintReport({ report, from, to }) {
                 </td>
                 <td className="py-2 pr-2 text-right">{formatNumber(row.used_days, 1)}</td>
                 <td className="py-2 pr-2 text-right">{row.period_days}</td>
-                <td className="py-2 pr-2 text-right">
-                  <div className="ml-auto flex max-w-[96px] items-center justify-end gap-2">
-                    <span>{formatNumber(row.occupancy_rate, 1)}%</span>
-                    <span className="inline-block h-3 w-10 border border-purple-200 bg-white">
-                      <span
-                        className="block h-full bg-purple-500"
-                        style={{ width: `${Math.min(100, Number(row.occupancy_rate || 0))}%` }}
-                      />
-                    </span>
-                  </div>
-                </td>
+                <td className="py-2 pr-2 text-right">{formatNumber(row.occupancy_rate, 1)}%</td>
                 <td className="py-2 pr-2 text-right">{row.booking_count}</td>
               </tr>
             ))}
@@ -660,7 +672,8 @@ function OccupancyPrintReport({ report, from, to }) {
           <SummaryPrintRow label="Tổng số phòng được sử dụng trong kỳ" value={summary.total_used_days ?? 0} />
         </div>
       </div>
-    </section>
+    </section>,
+    document.body
   );
 }
 

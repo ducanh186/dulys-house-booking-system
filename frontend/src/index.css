@@ -161,3 +161,46 @@
 body {
   @apply bg-background font-body text-on-surface;
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body.printing-occupancy-report {
+    background: #ffffff !important;
+  }
+
+  body.printing-occupancy-report #root {
+    display: none !important;
+  }
+
+  body.printing-occupancy-report .occupancy-print-report {
+    display: block !important;
+    width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body.printing-occupancy-report .occupancy-print-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  body.printing-occupancy-report .occupancy-print-report table {
+    page-break-inside: auto;
+  }
+
+  body.printing-occupancy-report .occupancy-print-report tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
