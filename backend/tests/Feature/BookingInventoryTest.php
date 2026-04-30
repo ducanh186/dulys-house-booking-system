@@ -55,10 +55,10 @@ class BookingInventoryTest extends TestCase
 
         $this->assertDatabaseHas('payments', [
             'booking_id' => $firstBookingId,
-            'status' => 'failed',
+            'status' => 'expired',
         ]);
 
-        $this->assertSame('pending', $retry->json('data.status'));
+        $this->assertSame('pending_payment', $retry->json('data.status'));
     }
 
     public function test_admin_check_in_assigns_all_reserved_rooms_and_check_out_releases_them(): void
@@ -92,10 +92,13 @@ class BookingInventoryTest extends TestCase
         $detail = BookingDetail::create([
             'booking_id' => $booking->id,
             'room_type_id' => $roomType->id,
+            'room_id' => $roomA->id,
             'unit_price' => 1000000,
             'quantity' => 2,
             'nights' => 1,
         ]);
+        $detail->assignedRooms()->sync([$roomA->id, $roomB->id]);
+        Room::whereIn('id', [$roomA->id, $roomB->id])->update(['status' => 'booked']);
 
         Payment::create([
             'booking_id' => $booking->id,

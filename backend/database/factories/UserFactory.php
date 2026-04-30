@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Models\Staff;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -16,6 +17,30 @@ class UserFactory extends Factory
      * The current password being used by the factory.
      */
     protected static ?string $password;
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if (!in_array($user->role, User::INTERNAL_ROLES, true)) {
+                return;
+            }
+
+            Staff::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'full_name' => $user->name,
+                    'phone' => $user->phone,
+                    'email' => $user->email,
+                    'role_title' => match ($user->role) {
+                        'admin' => 'Admin',
+                        'owner' => 'Quản lý',
+                        default => 'Lễ tân',
+                    },
+                    'is_active' => true,
+                ]
+            );
+        });
+    }
 
     /**
      * Define the model's default state.

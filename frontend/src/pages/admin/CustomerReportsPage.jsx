@@ -16,7 +16,10 @@ import {
 } from 'recharts';
 import {
   ArrowRight,
+  BedDouble,
+  Building2,
   CalendarRange,
+  Filter,
   Users2,
   TrendingUp,
   Wallet,
@@ -24,7 +27,7 @@ import {
   Repeat,
   Star,
 } from 'lucide-react';
-import { getCustomerReports } from '../../api/admin';
+import { getAdminHomestays, getCustomers, getCustomerReports, getReviewReports, getRooms } from '../../api/admin';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import PriceDisplay from '../../components/common/PriceDisplay';
@@ -45,6 +48,26 @@ function formatDate(dateStr) {
 
 function normalizeReport(payload) {
   return payload?.data ?? payload ?? {};
+}
+
+function normalizeCollection(response) {
+  const payload = response?.data ?? response ?? {};
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.items)) return payload.items;
+  return [];
+}
+
+function Stars({ rating }) {
+  const value = Number(rating || 0);
+
+  return (
+    <span className="inline-flex items-center gap-0.5 text-amber-500">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star key={star} className="h-3.5 w-3.5" fill={star <= value ? 'currentColor' : 'none'} />
+      ))}
+    </span>
+  );
 }
 
 function SummaryStat({ icon, label, value, hint }) {
@@ -83,6 +106,20 @@ export default function CustomerReportsPage() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reviewReport, setReviewReport] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(true);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewFilters, setReviewFilters] = useState({
+    homestay_id: '',
+    customer_id: '',
+    room_id: '',
+    rating: '',
+  });
+  const [filterOptions, setFilterOptions] = useState({
+    homestays: [],
+    customers: [],
+    rooms: [],
+  });
 
   async function loadReport() {
     setLoading(true);
@@ -97,12 +134,58 @@ export default function CustomerReportsPage() {
     }
   }
 
+  async function loadFilterOptions() {
+    try {
+      const [homestayRes, customerRes, roomRes] = await Promise.all([
+        getAdminHomestays(1),
+        getCustomers(1),
+        getRooms(1),
+      ]);
+      setFilterOptions({
+        homestays: normalizeCollection(homestayRes),
+        customers: normalizeCollection(customerRes),
+        rooms: normalizeCollection(roomRes),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function loadReviewReport(nextFilters = reviewFilters) {
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const params = {
+        from,
+        to,
+        ...(nextFilters.homestay_id ? { homestay_id: nextFilters.homestay_id } : {}),
+        ...(nextFilters.customer_id ? { customer_id: nextFilters.customer_id } : {}),
+        ...(nextFilters.room_id ? { room_id: nextFilters.room_id } : {}),
+        ...(nextFilters.rating ? { rating: nextFilters.rating } : {}),
+      };
+      const res = await getReviewReports(params);
+      setReviewReport(normalizeReport(res));
+    } catch (err) {
+      setReviewError(err?.message || 'Không thể tải báo cáo đánh giá.');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  function updateReviewFilter(name, value) {
+    setReviewFilters((prev) => ({ ...prev, [name]: value }));
+  }
+
   useEffect(() => {
     loadReport();
+    loadFilterOptions();
+    loadReviewReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const summary = report?.summary ?? {};
+  const reviewSummary = reviewReport?.summary ?? {};
+  const reviews = reviewReport?.reviews ?? [];
   const topCustomers = report?.top_customers ?? report?.topCustomers ?? [];
   const segments = useMemo(() => {
     const value = report?.segments ?? report?.segmentStats ?? [];
@@ -146,7 +229,13 @@ export default function CustomerReportsPage() {
                   Báo cáo hệ thống
                 </Button>
               </Link>
-              <Button onClick={loadReport} className="gap-2 rounded-full">
+              <Button
+                onClick={() => {
+                  loadReport();
+                  loadReviewReport();
+                }}
+                className="gap-2 rounded-full"
+              >
                 <Sparkles className="h-4 w-4" />
                 Làm mới dữ liệu
               </Button>
@@ -241,6 +330,187 @@ export default function CustomerReportsPage() {
               hint="Mức chi tiêu trung bình"
             />
           </div>
+
+          <Card className="admin-card">
+            <CardHeader className="border-b border-border/60 px-6 py-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <CardTitle className="font-headline text-lg font-extrabold text-on-surface">
+                    Đánh giá từ khách hàng
+                  </CardTitle>
+                  <p className="mt-1 text-sm text-on-surface-variant">
+                    Lọc phản hồi theo cơ sở, khách hàng, phòng và số sao đánh giá.
+                  </p>
+                </div>
+                <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">
+                  {reviewSummary.total_reviews ?? 0} đánh giá
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5 p-5 sm:p-6">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                    Cơ sở
+                  </label>
+                  <select
+                    value={reviewFilters.homestay_id}
+                    onChange={(e) => updateReviewFilter('homestay_id', e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                  >
+                    <option value="">Tất cả cơ sở</option>
+                    {filterOptions.homestays.map((homestay) => (
+                      <option key={homestay.id} value={homestay.id}>
+                        {homestay.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                    Khách hàng
+                  </label>
+                  <select
+                    value={reviewFilters.customer_id}
+                    onChange={(e) => updateReviewFilter('customer_id', e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                  >
+                    <option value="">Tất cả khách hàng</option>
+                    {filterOptions.customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.full_name || customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                    Phòng
+                  </label>
+                  <select
+                    value={reviewFilters.room_id}
+                    onChange={(e) => updateReviewFilter('room_id', e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                  >
+                    <option value="">Tất cả phòng</option>
+                    {filterOptions.rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.room_code} - {room.room_type?.name || 'Loại phòng'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                    Số sao
+                  </label>
+                  <select
+                    value={reviewFilters.rating}
+                    onChange={(e) => updateReviewFilter('rating', e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                  >
+                    <option value="">Tất cả số sao</option>
+                    {[5, 4, 3, 2, 1].map((rating) => (
+                      <option key={rating} value={rating}>
+                        {rating} sao
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    onClick={() => loadReviewReport(reviewFilters)}
+                    className="w-full gap-2"
+                    disabled={reviewLoading}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Lọc đánh giá
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-border/70 bg-surface-container-low p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                    <Star className="h-4 w-4 text-amber-500" fill="currentColor" />
+                    Điểm trung bình
+                  </div>
+                  <p className="mt-2 font-headline text-2xl font-extrabold">
+                    {Number(reviewSummary.average_rating || 0).toFixed(1)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-surface-container-low p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                    <Building2 className="h-4 w-4 text-primary-dim" />
+                    Tổng phản hồi
+                  </div>
+                  <p className="mt-2 font-headline text-2xl font-extrabold">
+                    {reviewSummary.total_reviews ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-surface-container-low p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                    <BedDouble className="h-4 w-4 text-primary-dim" />
+                    5 sao
+                  </div>
+                  <p className="mt-2 font-headline text-2xl font-extrabold">
+                    {reviewSummary.rating_counts?.[5] ?? 0}
+                  </p>
+                </div>
+              </div>
+
+              {reviewLoading ? (
+                <LoadingSpinner />
+              ) : reviewError ? (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-error">
+                  {reviewError}
+                </p>
+              ) : reviews.length ? (
+                <div className="space-y-3">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="rounded-2xl border border-border/70 bg-white p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-headline text-base font-bold text-on-surface">
+                              {review.customer_name || 'Khách hàng'}
+                            </h3>
+                            <Stars rating={review.rating} />
+                          </div>
+                          <p className="mt-1 text-sm text-on-surface-variant">
+                            {review.comment || 'Không có nhận xét.'}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-on-surface-variant">
+                            <Badge className="admin-pill border-0 bg-surface-container-low text-on-surface-variant">
+                              {review.homestay_name || 'Chưa có cơ sở'}
+                            </Badge>
+                            <Badge className="admin-pill border-0 bg-surface-container-low text-on-surface-variant">
+                              {review.room_codes?.join(', ') || 'Chưa gán phòng'}
+                            </Badge>
+                            <Badge className="admin-pill border-0 bg-surface-container-low text-on-surface-variant">
+                              {review.room_type_names?.join(', ') || 'Chưa có loại phòng'}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-left text-xs text-on-surface-variant sm:text-right">
+                          <p className="font-mono font-semibold text-primary-dim">{review.booking_code}</p>
+                          <p>{formatDate(review.created_at)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Star}
+                  title="Chưa có đánh giá phù hợp"
+                  description="Thay đổi bộ lọc hoặc khoảng thời gian để xem thêm phản hồi."
+                  className="min-h-[220px]"
+                />
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <Card className="admin-card">

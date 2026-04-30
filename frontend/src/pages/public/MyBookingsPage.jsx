@@ -27,6 +27,10 @@ function reviewPath(bookingId) {
   return `${BOOKINGS_PATH}/${bookingId}/review`;
 }
 
+function detailPath(bookingId) {
+  return `${BOOKINGS_PATH}/${bookingId}`;
+}
+
 const NAV_ITEMS = [
   { id: 'profile', label: 'Cài đặt cá nhân', icon: Settings, to: PROFILE_PATH },
   { id: 'bookings', label: 'Lịch sử đặt phòng', icon: History, to: BOOKINGS_PATH },
@@ -564,7 +568,7 @@ function UpcomingBookingCard({ booking, onCancel, highlighted }) {
           <div className="flex items-end justify-between gap-4">
             <div className="flex gap-2 flex-wrap">
               <Link
-                to={reviewPath(booking.id)}
+                to={detailPath(booking.id)}
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-full text-xs font-semibold h-8 px-4 sunlight-gradient text-white hover:opacity-90 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -617,6 +621,12 @@ function PastBookingCard({ booking, highlighted }) {
         <PriceDisplay amount={booking.total_amount} className="font-bold text-primary" />
 
         <div className="flex items-center gap-2 pt-1">
+          <Link
+            to={detailPath(booking.id)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            Xem chi tiết
+          </Link>
           {canReview && (
             <Link
               to={reviewPath(booking.id)}

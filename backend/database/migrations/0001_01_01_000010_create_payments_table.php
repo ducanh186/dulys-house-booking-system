@@ -14,7 +14,7 @@ return new class extends Migration
             $table->enum('method', ['cash', 'transfer', 'card'])->default('transfer');
             $table->decimal('amount', 12, 2);
             $table->timestamp('paid_at')->nullable();
-            $table->enum('status', ['pending', 'success', 'failed', 'refunded'])->default('pending');
+            $table->enum('status', ['pending', 'proof_uploaded', 'success', 'failed', 'refunded', 'expired'])->default('pending');
             $table->timestamps();
         });
     }

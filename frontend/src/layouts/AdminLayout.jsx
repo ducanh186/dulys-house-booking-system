@@ -33,10 +33,10 @@ function getNavGroups(role) {
       label: 'Vận hành',
       items: [
         { to: '/admin/bookings', label: 'Đặt phòng', description: 'Xử lý đơn đặt phòng', icon: ClipboardList },
+        { to: '/admin/payments', label: 'Thanh toán', description: 'Giao dịch và đối soát', icon: CreditCard },
         { to: '/admin/availability', label: 'Lịch phòng', description: 'Kiểm soát tình trạng phòng', icon: CalendarRange },
         { to: '/admin/homestays', label: 'Cơ sở', description: 'Quản lý homestay', icon: Building2 },
         { to: '/admin/rooms', label: 'Phòng', description: 'Danh sách phòng', icon: Search },
-        { to: '/admin/payments', label: 'Thanh toán', description: 'Giao dịch và đối soát', icon: CreditCard },
       ],
     },
     {
