@@ -74,6 +74,9 @@ export const getAdminBookings = (page = 1, params = {}) =>
 export const getAdminBooking = (id) =>
   client.get(`/admin/bookings/${id}`);
 
+export const createOfflineBooking = (data) =>
+  client.post('/admin/bookings/offline', data);
+
 export const confirmBooking = (id) =>
   client.patch(`/admin/bookings/${id}/confirm`);
 
@@ -151,6 +154,9 @@ export const getCancellationReport = (params) =>
 
 export const getRevenueByHomestay = (params) =>
   client.get('/admin/reports/revenue-by-homestay', { params });
+
+export const getRevenueGrouped = (params) =>
+  client.get('/admin/reports/revenue-grouped', { params });
 
 export const getCustomerReports = (params) =>
   client.get('/admin/reports/customers', { params });

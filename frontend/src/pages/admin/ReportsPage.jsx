@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import {
   getRevenueByHomestay,
+  getRevenueGrouped,
   getOccupancyReport,
   getOccupancyDetailReport,
   getCancellationReport,
@@ -43,6 +44,14 @@ const TABS = [
   { key: 'revenue', label: 'Doanh thu', icon: CircleDollarSign },
   { key: 'occupancy', label: 'Công suất', icon: BarChart3 },
   { key: 'cancellations', label: 'Hủy phòng', icon: ShieldAlert },
+];
+
+const REVENUE_DIMENSIONS = [
+  { value: 'homestay', label: 'Theo cơ sở' },
+  { value: 'customer', label: 'Theo khách hàng' },
+  { value: 'room_type', label: 'Theo loại phòng' },
+  { value: 'month', label: 'Theo tháng' },
+  { value: 'quarter', label: 'Theo quý' },
 ];
 
 const COLORS = ['#fbd12d', '#386360', '#6e5900', '#7d4d5f', '#4e5e66'];
@@ -133,6 +142,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [homestayId, setHomestayId] = useState('');
+  const [revenueDimension, setRevenueDimension] = useState('homestay');
   const [homestays, setHomestays] = useState([]);
   const [printReport, setPrintReport] = useState(null);
   const [printing, setPrinting] = useState(false);
@@ -151,7 +161,9 @@ export default function ReportsPage() {
     try {
       let response;
       if (tab === 'revenue') {
-        response = await getRevenueByHomestay({ from, to });
+        response = revenueDimension === 'homestay'
+          ? await getRevenueByHomestay({ from, to })
+          : await getRevenueGrouped({ from, to, dimension: revenueDimension });
       } else if (tab === 'occupancy') {
         response = await getOccupancyReport({ from, to, homestay_id: homestayId || undefined });
       } else {
@@ -185,11 +197,13 @@ export default function ReportsPage() {
   useEffect(() => {
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, revenueDimension]);
 
   const normalizedRevenue = useMemo(() => {
     const value = tab === 'revenue' ? data : [];
-    return Array.isArray(value) ? value : [];
+    if (Array.isArray(value)) return value.map((item) => ({ ...item, label: item.homestay_name }));
+    if (Array.isArray(value?.rows)) return value.rows;
+    return [];
   }, [tab, data]);
 
   const normalizedOccupancy = useMemo(() => {
@@ -202,11 +216,11 @@ export default function ReportsPage() {
   }, [tab, data]);
 
   const revenueSummary = useMemo(() => {
-    const totalRevenue = normalizedRevenue.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);
-    const bookingCount = normalizedRevenue.reduce((sum, item) => sum + Number(item.booking_count || 0), 0);
+    const totalRevenue = data?.summary?.total_revenue ?? normalizedRevenue.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);
+    const bookingCount = data?.summary?.booking_count ?? normalizedRevenue.reduce((sum, item) => sum + Number(item.booking_count || 0), 0);
     const avgValue = bookingCount > 0 ? totalRevenue / bookingCount : 0;
     return { totalRevenue, bookingCount, avgValue };
-  }, [normalizedRevenue]);
+  }, [data, normalizedRevenue]);
 
   const occupancySummary = useMemo(() => {
     if (!normalizedOccupancy.length) return { average: 0, peak: 0, trough: 0 };
@@ -279,6 +293,7 @@ export default function ReportsPage() {
                   <input
                     type="date"
                     value={from}
+                    max={new Date().toISOString().slice(0, 10)}
                     onChange={(e) => setFrom(e.target.value)}
                     className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
                   />
@@ -290,6 +305,7 @@ export default function ReportsPage() {
                   <input
                     type="date"
                     value={to}
+                    max={new Date().toISOString().slice(0, 10)}
                     onChange={(e) => setTo(e.target.value)}
                     className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
                   />
@@ -311,6 +327,25 @@ export default function ReportsPage() {
                     {homestays.map((homestay) => (
                       <option key={homestay.id} value={homestay.id}>
                         {homestay.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {tab === 'revenue' && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                    Nhóm doanh thu
+                  </label>
+                  <select
+                    value={revenueDimension}
+                    onChange={(e) => setRevenueDimension(e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                  >
+                    {REVENUE_DIMENSIONS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
                       </option>
                     ))}
                   </select>
@@ -382,7 +417,7 @@ export default function ReportsPage() {
                 <Card className="admin-card">
                   <CardHeader className="border-b border-border/60 px-6 py-5">
                     <CardTitle className="font-headline text-lg font-extrabold text-on-surface">
-                      Doanh thu theo cơ sở
+                      Doanh thu {REVENUE_DIMENSIONS.find((item) => item.value === revenueDimension)?.label.toLowerCase()}
                     </CardTitle>
                     <p className="mt-1 text-sm text-on-surface-variant">
                       {formatMonthLabel(from.slice(0, 7))} - {formatMonthLabel(to.slice(0, 7))}
@@ -394,7 +429,7 @@ export default function ReportsPage() {
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={normalizedRevenue}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#d6ebf7" />
-                            <XAxis dataKey="homestay_name" tick={{ fontSize: 11 }} />
+                            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                             <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000000)}tr`} tick={{ fontSize: 11 }} />
                             <Tooltip formatter={(value) => [formatCurrency(value), 'Doanh thu']} />
                             <Bar dataKey="total_revenue" fill="#6e5900" radius={[12, 12, 0, 0]} />
@@ -434,8 +469,8 @@ export default function ReportsPage() {
                           </thead>
                           <tbody>
                             {normalizedRevenue.map((item) => (
-                              <tr key={item.homestay_id} className="border-b border-border/50 last:border-0">
-                                <td className="px-5 py-4 font-semibold text-on-surface">{item.homestay_name}</td>
+                              <tr key={item.key || item.homestay_id} className="border-b border-border/50 last:border-0">
+                                <td className="px-5 py-4 font-semibold text-on-surface">{item.label || item.homestay_name}</td>
                                 <td className="px-5 py-4 text-on-surface-variant">{item.booking_count}</td>
                                 <td className="px-5 py-4 font-semibold text-on-surface">
                                   {formatCurrency(item.total_revenue)}
@@ -449,7 +484,7 @@ export default function ReportsPage() {
                       <EmptyState
                         icon={Sparkles}
                         title="Chưa có bảng doanh thu"
-                        description="Dữ liệu bảng sẽ xuất hiện khi API trả về doanh thu theo cơ sở."
+                        description="Dữ liệu bảng sẽ xuất hiện khi API trả về doanh thu theo nhóm đã chọn."
                         className="min-h-[320px]"
                       />
                     )}

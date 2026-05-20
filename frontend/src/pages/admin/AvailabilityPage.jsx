@@ -88,6 +88,7 @@ function DayMetric({ label, value }) {
 
 export default function AvailabilityPage() {
   const [roomTypes, setRoomTypes] = useState([]);
+  const [selectedHomestay, setSelectedHomestay] = useState('');
   const [selectedRT, setSelectedRT] = useState('');
   const [month, setMonth] = useState(() => {
     const d = new Date();
@@ -171,6 +172,19 @@ export default function AvailabilityPage() {
   }, [calendar]);
 
   const selectedRoomType = roomTypes.find((item) => String(item.id) === String(selectedRT));
+  const homestayOptions = useMemo(() => {
+    const map = new Map();
+    for (const roomType of roomTypes) {
+      if (roomType.homestay?.id) {
+        map.set(roomType.homestay.id, roomType.homestay.name);
+      }
+    }
+    return Array.from(map, ([id, name]) => ({ id, name }));
+  }, [roomTypes]);
+  const filteredRoomTypes = useMemo(() => {
+    if (!selectedHomestay) return roomTypes;
+    return roomTypes.filter((roomType) => String(roomType.homestay?.id) === String(selectedHomestay));
+  }, [roomTypes, selectedHomestay]);
   const selectedTone = selectedDay ? statusTone(selectedDay) : null;
   const blockedDateId = selectedDay?.blocked_date_id || null;
 
@@ -264,6 +278,32 @@ export default function AvailabilityPage() {
             <CardContent className="space-y-4 p-5">
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                  Cơ sở
+                </label>
+                <select
+                  value={selectedHomestay}
+                  onChange={(e) => {
+                    const nextHomestay = e.target.value;
+                    const nextRoomTypes = nextHomestay
+                      ? roomTypes.filter((roomType) => String(roomType.homestay?.id) === String(nextHomestay))
+                      : roomTypes;
+                    setSelectedHomestay(nextHomestay);
+                    setSelectedRT(nextRoomTypes[0]?.id || '');
+                    setSelectedDay(null);
+                  }}
+                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
+                >
+                  <option value="">Tất cả cơ sở</option>
+                  {homestayOptions.map((homestay) => (
+                    <option key={homestay.id} value={homestay.id}>
+                      {homestay.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
                   Loại phòng
                 </label>
                 <select
@@ -274,9 +314,9 @@ export default function AvailabilityPage() {
                   }}
                   className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
                 >
-                  {roomTypes.map((roomType) => (
+                  {filteredRoomTypes.map((roomType) => (
                     <option key={roomType.id} value={roomType.id}>
-                      {roomType.name} {roomType.homestay?.name ? `- ${roomType.homestay.name}` : ''}
+                      {roomType.name}
                     </option>
                   ))}
                 </select>

@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   CalendarDays,
   CheckCheck,
   CircleEllipsis,
   CircleX,
   Clock3,
+  PlusCircle,
+  Search,
   Users2,
 } from 'lucide-react';
 import {
   getAdminBookings,
+  getRoomTypes,
+  createOfflineBooking,
   confirmBooking,
   checkInBooking,
   checkOutBooking,
@@ -33,6 +37,14 @@ const ACTION_LOADING_KEY = {
   checkin: 'checkin',
   checkout: 'checkout',
   cancel: 'cancel',
+};
+
+const PAYMENT_STATUS_LABELS = {
+  pending: 'Chờ thanh toán',
+  proof_uploaded: 'Chờ xác nhận TT',
+  success: 'Đã thanh toán',
+  failed: 'Thanh toán lỗi',
+  refunded: 'Đã hoàn tiền',
 };
 
 function normalizeCollection(response) {
@@ -79,7 +91,9 @@ function BookingCard({ booking, onConfirm, onConfirmPayment, onCheckIn, onCheckO
   const canCheckIn = booking.status === 'confirmed';
   const canCheckOut = booking.status === 'checked_in';
   const canCancel = ['pending', 'pending_payment', 'payment_review', 'confirmed'].includes(booking.status);
-  const proof = booking.payments?.[0]?.proof_image_url ?? null;
+  const latestPayment = booking.payments?.[0] ?? null;
+  const proof = latestPayment?.proof_image_url ?? null;
+  const paymentStatus = booking.payment_status || latestPayment?.status || 'pending';
 
   return (
     <Card
@@ -155,7 +169,7 @@ function BookingCard({ booking, onConfirm, onConfirmPayment, onCheckIn, onCheckO
                 Trạng thái vận hành
               </div>
               <p className="mt-2 text-sm text-on-surface-variant">
-                Thanh toán: <span className="font-semibold text-on-surface">{booking.payment_method || booking.paymentMethod || '—'}</span>
+                Thanh toán: <span className="font-semibold text-on-surface">{PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}</span>
               </p>
               <p className="mt-1 text-sm text-on-surface-variant">
                 Ghi chú: <span className="font-semibold text-on-surface">{booking.notes || 'Không có'}</span>
@@ -243,6 +257,127 @@ const STATUS_FILTERS = [
   { value: 'expired', label: 'Hết hạn' },
 ];
 
+function OfflineBookingForm({ onCreated }) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [form, setForm] = useState({
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    check_in: tomorrow.toISOString().slice(0, 10),
+    check_out: dayAfterTomorrow.toISOString().slice(0, 10),
+    guest_count: '1',
+    room_type_id: '',
+    quantity: '1',
+    payment_method: 'transfer',
+    notes: '',
+  });
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getRoomTypes(1, { active_only: 1, per_page: 100 })
+      .then((response) => {
+        const list = normalizeCollection(response);
+        if (!alive) return;
+        setRoomTypes(list);
+        setForm((prev) => ({ ...prev, room_type_id: prev.room_type_id || list[0]?.id || '' }));
+      })
+      .catch(() => {
+        if (alive) setError('Không thể tải danh sách loại phòng.');
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  function updateField(name, value) {
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setError('');
+    setMessage('');
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!form.customer_name.trim() || !form.customer_phone.trim() || !form.room_type_id) {
+      setError('Vui lòng nhập khách hàng, số điện thoại và loại phòng.');
+      return;
+    }
+
+    if (Number(form.guest_count) < 1 || Number(form.guest_count) > 4) {
+      setError('Số khách chỉ được nhập từ 1 đến 4.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await createOfflineBooking({
+        check_in: form.check_in,
+        check_out: form.check_out,
+        guest_count: Number(form.guest_count),
+        customer_name: form.customer_name.trim(),
+        customer_phone: form.customer_phone.trim(),
+        customer_email: form.customer_email.trim() || undefined,
+        payment_method: form.payment_method,
+        notes: form.notes.trim() || undefined,
+        rooms: [{ room_type_id: form.room_type_id, quantity: Number(form.quantity || 1) }],
+      });
+      setMessage('Đã tạo đơn đặt phòng tạm giữ chờ thanh toán.');
+      onCreated?.();
+    } catch (err) {
+      setError(err?.message || 'Không thể tạo đơn đặt phòng.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className="admin-card">
+      <CardHeader className="border-b border-border/60 px-6 py-5">
+        <CardTitle className="flex items-center gap-2 font-headline text-lg font-extrabold text-on-surface">
+          <PlusCircle className="h-5 w-5 text-primary" />
+          Đặt phòng qua nhân viên
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-5 sm:p-6">
+        <form onSubmit={handleSubmit} className="grid gap-3 lg:grid-cols-4">
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Tên khách hàng" value={form.customer_name} onChange={(e) => updateField('customer_name', e.target.value)} />
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Số điện thoại" value={form.customer_phone} onChange={(e) => updateField('customer_phone', e.target.value)} />
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Email" type="email" value={form.customer_email} onChange={(e) => updateField('customer_email', e.target.value)} />
+          <select className="rounded-2xl border border-border px-4 py-3 text-sm" value={form.room_type_id} onChange={(e) => updateField('room_type_id', e.target.value)}>
+            {roomTypes.map((roomType) => (
+              <option key={roomType.id} value={roomType.id}>
+                {roomType.name} {roomType.homestay?.name ? `- ${roomType.homestay.name}` : ''}
+              </option>
+            ))}
+          </select>
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm" type="date" min={new Date().toISOString().slice(0, 10)} value={form.check_in} onChange={(e) => updateField('check_in', e.target.value)} />
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm" type="date" min={form.check_in || new Date().toISOString().slice(0, 10)} value={form.check_out} onChange={(e) => updateField('check_out', e.target.value)} />
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm" type="number" min="1" max="4" value={form.guest_count} onChange={(e) => updateField('guest_count', e.target.value)} />
+          <select className="rounded-2xl border border-border px-4 py-3 text-sm" value={form.payment_method} onChange={(e) => updateField('payment_method', e.target.value)}>
+            <option value="transfer">Chuyển khoản</option>
+            <option value="cash">Tiền mặt</option>
+            <option value="card">Thẻ</option>
+          </select>
+          <input className="rounded-2xl border border-border px-4 py-3 text-sm lg:col-span-3" placeholder="Ghi chú" value={form.notes} onChange={(e) => updateField('notes', e.target.value)} />
+          <Button type="submit" disabled={submitting} className="rounded-full">
+            {submitting ? 'Đang tạo...' : 'Tạo đơn'}
+          </Button>
+        </form>
+        {message && <p className="mt-3 text-sm font-semibold text-success">{message}</p>}
+        {error && <p className="mt-3 text-sm font-semibold text-error">{error}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function BookingManagementPage() {
   const [bookings, setBookings] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -255,6 +390,8 @@ export default function BookingManagementPage() {
   const page = Number(searchParams.get('page') || '1');
   const statusFilter = searchParams.get('status') || '';
   const bookingIdFilter = searchParams.get('booking_id') || '';
+  const searchFilter = searchParams.get('search') || '';
+  const [searchInput, setSearchInput] = useState(searchFilter);
 
   async function fetchBookings() {
     setLoading(true);
@@ -263,6 +400,7 @@ export default function BookingManagementPage() {
       const response = await getAdminBookings(page, {
         ...(statusFilter ? { status: statusFilter } : {}),
         ...(bookingIdFilter ? { booking_id: bookingIdFilter } : {}),
+        ...(searchFilter ? { search: searchFilter } : {}),
       });
       setBookings(normalizeCollection(response));
       setMeta(response?.meta ?? null);
@@ -277,7 +415,7 @@ export default function BookingManagementPage() {
   useEffect(() => {
     fetchBookings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter, bookingIdFilter]);
+  }, [page, statusFilter, bookingIdFilter, searchFilter]);
 
   useEffect(() => {
     if (!bookingIdFilter || loading || error) return;
@@ -339,6 +477,15 @@ export default function BookingManagementPage() {
     updateQuery({ page: nextPage });
   }
 
+  function handleSearchSubmit(e) {
+    e.preventDefault();
+    updateQuery({
+      search: searchInput.trim() || null,
+      page: 1,
+      booking_id: null,
+    });
+  }
+
   return (
     <div className="space-y-6">
       <section className="admin-card-soft rounded-[30px] p-6 sm:p-8">
@@ -362,6 +509,8 @@ export default function BookingManagementPage() {
         <SummaryCard icon={CalendarDays} label="Đang lưu trú" value={summary.checked_in} hint="Cần theo dõi" />
       </div>
 
+      <OfflineBookingForm onCreated={fetchBookings} />
+
       <Card className="admin-card">
         <CardHeader className="space-y-4 border-b border-border/60 px-6 py-5">
           <div className="flex items-center justify-between">
@@ -371,6 +520,25 @@ export default function BookingManagementPage() {
             <Badge className="admin-pill border-0 bg-primary-container text-on-primary-container">
               {meta?.total ?? bookings.length} đơn
             </Badge>
+          </div>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <form onSubmit={handleSearchSubmit} className="flex flex-1 gap-2">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+                <input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Tìm theo mã đặt phòng hoặc tên khách"
+                  className="w-full rounded-2xl border border-border bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-primary"
+                />
+              </div>
+              <Button type="submit" variant="outline" className="rounded-full">
+                Tìm
+              </Button>
+            </form>
+            <Link to="/admin/bookings/history" className="rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-low">
+              Lịch sử đặt phòng
+            </Link>
           </div>
           <div className="flex flex-wrap gap-2">
             {STATUS_FILTERS.map((sf) => (

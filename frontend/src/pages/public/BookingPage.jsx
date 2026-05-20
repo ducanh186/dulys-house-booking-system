@@ -91,7 +91,13 @@ export default function BookingPage() {
       if (formErrors.guest_count) {
         setFormErrors((prev) => ({ ...prev, guest_count: null }));
       }
+      return;
     }
+
+    setFormErrors((prev) => ({
+      ...prev,
+      guest_count: 'Số khách chỉ được nhập từ 1 đến 4.',
+    }));
   }
 
   function focusFirstInvalidField(errors) {

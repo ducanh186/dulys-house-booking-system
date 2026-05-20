@@ -30,6 +30,7 @@ import NotificationsPage from './pages/public/NotificationsPage';
 
 import DashboardPage from './pages/admin/DashboardPage';
 import BookingManagementPage from './pages/admin/BookingManagementPage';
+import BookingHistoryPage from './pages/admin/BookingHistoryPage.jsx';
 import HomestayManagementPage from './pages/admin/HomestayManagementPage';
 import RoomManagementPage from './pages/admin/RoomManagementPage';
 import CustomerManagementPage from './pages/admin/CustomerManagementPage';
@@ -95,6 +96,7 @@ export default function App() {
           <Route path="/admin" element={<ProtectedRoute roles={['admin', 'owner', 'staff']}><AdminLayout /></ProtectedRoute>}>
             <Route index element={<DashboardPage />} />
             <Route path="bookings" element={<BookingManagementPage />} />
+            <Route path="bookings/history" element={<BookingHistoryPage />} />
             <Route path="homestays" element={<HomestayManagementPage />} />
             <Route path="rooms" element={<RoomManagementPage />} />
             <Route path="customers" element={<CustomerManagementPage />} />

@@ -20,22 +20,26 @@ use App\Http\Controllers\Api\Admin\AdminRoomTypeController;
 use App\Http\Controllers\Api\Admin\AdminUserAccountController;
 use Illuminate\Support\Facades\Route;
 
+$throttle = fn (int $maxAttempts): string => app()->environment(['local', 'testing'])
+    ? 'throttle:1000,1'
+    : "throttle:{$maxAttempts},1";
+
 // ─── Public ─────────────────────────────────────────────
-Route::middleware('throttle:5,1')->group(function () {
+Route::middleware($throttle(5))->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
 });
 
-Route::middleware('throttle:10,1')->group(function () {
+Route::middleware($throttle(10))->group(function () {
     Route::post('/auth/forgot-password/request', [AuthController::class, 'requestForgotPasswordOtp']);
     Route::post('/auth/forgot-password/resend', [AuthController::class, 'resendForgotPasswordOtp']);
 });
 
-Route::middleware('throttle:20,1')->group(function () {
+Route::middleware($throttle(20))->group(function () {
     Route::post('/auth/forgot-password/verify', [AuthController::class, 'verifyForgotPasswordOtp']);
 });
 
-Route::middleware('throttle:30,1')->group(function () {
+Route::middleware($throttle(30))->group(function () {
     Route::get('/homestays', [HomestayController::class, 'index']);
     Route::get('/homestays/{homestay:slug}', [HomestayController::class, 'show']);
     Route::get('/homestays/{homestay:slug}/reviews', [ReviewController::class, 'index']);
@@ -55,14 +59,14 @@ Route::middleware('throttle:30,1')->group(function () {
 });
 
 // ─── Authenticated ──────────────────────────────────────
-Route::middleware(['auth:sanctum', 'active.internal'])->group(function () {
+Route::middleware(['auth:sanctum', 'active.internal'])->group(function () use ($throttle) {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::patch('/profile', [ProfileController::class, 'update']);
 
-    Route::middleware('throttle:10,1')->group(function () {
+    Route::middleware($throttle(10))->group(function () {
         Route::post('/bookings', [BookingController::class, 'store']);
     });
     Route::get('/bookings', [BookingController::class, 'index']);
@@ -81,7 +85,7 @@ Route::middleware(['auth:sanctum', 'active.internal'])->group(function () {
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
 
     // ─── Admin / Owner / Staff (read-only for all) ─────
-    Route::middleware(['role:admin,owner,staff', 'throttle:60,1'])->prefix('admin')->group(function () {
+    Route::middleware(['role:admin,owner,staff', $throttle(60)])->prefix('admin')->group(function () {
         // Dashboard
         Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary']);
         Route::get('/dashboard/revenue', [AdminDashboardController::class, 'revenue']);
@@ -96,6 +100,7 @@ Route::middleware(['auth:sanctum', 'active.internal'])->group(function () {
 
         // Booking management (read + lifecycle actions for all)
         Route::get('/bookings', [AdminBookingController::class, 'index']);
+        Route::post('/bookings/offline', [AdminBookingController::class, 'storeOffline']);
         Route::get('/bookings/{booking}', [AdminBookingController::class, 'show']);
         Route::patch('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm']);
         Route::patch('/bookings/{booking}/check-in', [AdminBookingController::class, 'checkIn']);
@@ -123,12 +128,13 @@ Route::middleware(['auth:sanctum', 'active.internal'])->group(function () {
         Route::get('/reports/occupancy-detail', [AdminReportController::class, 'occupancyDetail']);
         Route::get('/reports/cancellations', [AdminReportController::class, 'cancellations']);
         Route::get('/reports/revenue-by-homestay', [AdminReportController::class, 'revenueByHomestay']);
+        Route::get('/reports/revenue-grouped', [AdminReportController::class, 'revenueGrouped']);
         Route::get('/reports/customers', [AdminReportController::class, 'customers']);
         Route::get('/reports/reviews', [AdminReportController::class, 'reviews']);
     });
 
     // ─── Admin-only write operations ──────────────────────
-    Route::middleware(['role:admin', 'throttle:60,1'])->prefix('admin')->group(function () {
+    Route::middleware(['role:admin', $throttle(60)])->prefix('admin')->group(function () {
         // Internal accounts
         Route::get('/accounts', [AdminUserAccountController::class, 'index']);
         Route::post('/accounts', [AdminUserAccountController::class, 'store']);

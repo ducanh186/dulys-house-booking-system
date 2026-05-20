@@ -69,6 +69,7 @@ class BookingService
             $booking = Booking::create([
                 'booking_code' => $this->generateBookingCode(),
                 'customer_id' => $data['customer_id'],
+                'staff_id' => $data['staff_id'] ?? null,
                 'check_in' => $checkIn,
                 'check_out' => $checkOut,
                 'guest_count' => $data['guest_count'] ?? 1,

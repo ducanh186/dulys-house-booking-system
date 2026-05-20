@@ -9,7 +9,12 @@ class BookingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $homestay = $this->details->first()?->roomType?->homestay;
+        $firstDetail = $this->details->first();
+        $roomType = $firstDetail?->roomType;
+        $homestay = $roomType?->homestay;
+        $latestPayment = $this->relationLoaded('payments')
+            ? $this->payments->sortByDesc('created_at')->first()
+            : $this->payments()->latest()->first();
         $review = $this->relationLoaded('review') ? $this->review : null;
         $hasReview = $this->relationLoaded('review')
             ? $review !== null
@@ -26,6 +31,7 @@ class BookingResource extends JsonResource
             'expires_at' => $this->expires_at?->toISOString(),
             'confirmed_at' => $this->confirmed_at?->toISOString(),
             'cancelled_at' => $this->cancelled_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
             'cancel_reason' => $this->cancel_reason,
             'guest_count' => (int) $this->guest_count,
             'total_amount' => (float) $this->total_amount,
@@ -33,6 +39,8 @@ class BookingResource extends JsonResource
             'notes' => $this->notes,
             'nights' => $this->nights,
             'homestay' => $homestay ? new HomestayResource($homestay) : null,
+            'room_type' => $roomType ? new RoomTypeResource($roomType) : null,
+            'payment_status' => $latestPayment?->status,
             'customer' => $this->whenLoaded('customer', fn () => new CustomerResource($this->customer)),
             'details' => BookingDetailResource::collection($this->whenLoaded('details')),
             'payments' => PaymentResource::collection($this->whenLoaded('payments')),

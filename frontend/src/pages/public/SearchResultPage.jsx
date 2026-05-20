@@ -20,6 +20,7 @@ export default function SearchResultPage() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [guestError, setGuestError] = useState('');
   const [mode, setMode] = useState(checkIn && checkOut ? 'search' : 'listing');
   const [homestayFilter, setHomestayFilter] = useState(searchParams.get('homestay_id') || '');
 
@@ -100,6 +101,10 @@ export default function SearchResultPage() {
       return;
     }
     const params = { check_in: checkIn, check_out: checkOut };
+    if (guests && (Number(guests) < 1 || Number(guests) > 4)) {
+      setGuestError('Số khách chỉ được nhập từ 1 đến 4.');
+      return;
+    }
     if (guests) params.guests = guests;
     if (homestayFilter) params.homestay_id = homestayFilter;
     setSearchParams(params);
@@ -196,11 +201,15 @@ export default function SearchResultPage() {
                     const val = e.target.value;
                     if (val === '' || (Number(val) >= 1 && Number(val) <= 4)) {
                       setGuests(val);
+                      setGuestError('');
+                    } else {
+                      setGuestError('Số khách chỉ được nhập từ 1 đến 4.');
                     }
                   }}
                   placeholder="1"
                   className="pl-9"
                 />
+                {guestError && <p className="mt-1 text-xs font-semibold text-error">{guestError}</p>}
               </div>
             </div>
             <div className="flex flex-col gap-1 flex-1 sm:max-w-[200px]">

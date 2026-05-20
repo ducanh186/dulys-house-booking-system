@@ -285,6 +285,107 @@ class DashboardService
         })->values()->all();
     }
 
+    public function getRevenueGrouped(string $dimension, Carbon $from, Carbon $to): array
+    {
+        $start = $from->copy()->startOfDay();
+        $end = $to->copy()->endOfDay();
+
+        $bookings = Booking::query()
+            ->with('customer', 'details.roomType.homestay', 'payments')
+            ->whereHas('payments', fn ($query) => $query->where('status', 'success'))
+            ->whereBetween('created_at', [$start, $end])
+            ->get();
+
+        $rows = collect();
+
+        foreach ($bookings as $booking) {
+            $paidAmount = (float) $booking->payments->where('status', 'success')->sum('amount');
+
+            if ($paidAmount <= 0) {
+                continue;
+            }
+
+            if ($dimension === 'room_type') {
+                foreach ($booking->details as $detail) {
+                    $roomType = $detail->roomType;
+                    $key = $roomType?->id ?? 'unknown';
+                    $amount = (float) $detail->unit_price * (int) $detail->quantity * (int) $detail->nights;
+                    $rows->push([
+                        'key' => $key,
+                        'label' => $roomType?->name ?? 'Chưa xác định',
+                        'booking_id' => $booking->id,
+                        'total_revenue' => $amount,
+                    ]);
+                }
+
+                continue;
+            }
+
+            if ($dimension === 'homestay') {
+                foreach ($booking->details->groupBy(fn ($detail) => $detail->roomType?->homestay?->id ?? 'unknown') as $key => $details) {
+                    $homestay = $details->first()?->roomType?->homestay;
+                    $rows->push([
+                        'key' => $key,
+                        'label' => $homestay?->name ?? 'Chưa xác định',
+                        'booking_id' => $booking->id,
+                        'total_revenue' => $paidAmount,
+                    ]);
+                }
+
+                continue;
+            }
+
+            [$key, $label] = match ($dimension) {
+                'customer' => [
+                    $booking->customer?->id ?? 'unknown',
+                    $booking->customer?->full_name ?? 'Khách hàng',
+                ],
+                'month' => [
+                    $booking->created_at->format('Y-m'),
+                    'Tháng ' . $booking->created_at->format('m/Y'),
+                ],
+                'quarter' => [
+                    $booking->created_at->format('Y') . '-Q' . $booking->created_at->quarter,
+                    'Quý ' . $booking->created_at->quarter . '/' . $booking->created_at->format('Y'),
+                ],
+            };
+
+            $rows->push([
+                'key' => $key,
+                'label' => $label,
+                'booking_id' => $booking->id,
+                'total_revenue' => $paidAmount,
+            ]);
+        }
+
+        $groupedRows = $rows
+            ->groupBy('key')
+            ->map(function ($items, $key) {
+                $bookingCount = $items->pluck('booking_id')->unique()->count();
+                $totalRevenue = (float) round((float) $items->sum('total_revenue'), 0);
+
+                return [
+                    'key' => (string) $key,
+                    'label' => $items->first()['label'],
+                    'booking_count' => $bookingCount,
+                    'total_revenue' => $totalRevenue,
+                    'avg_booking_value' => $bookingCount > 0 ? round($totalRevenue / $bookingCount, 0) : 0,
+                ];
+            })
+            ->sortByDesc('total_revenue')
+            ->values();
+
+        return [
+            'dimension' => $dimension,
+            'summary' => [
+                'total_revenue' => (float) round((float) $groupedRows->sum('total_revenue'), 0),
+                'booking_count' => $bookings->count(),
+                'group_count' => $groupedRows->count(),
+            ],
+            'rows' => $groupedRows->all(),
+        ];
+    }
+
     public function getCustomerReport(Carbon $from, Carbon $to): array
     {
         $start = $from->copy()->startOfDay();

@@ -61,6 +61,23 @@ class AdminReportController extends Controller
         return $this->success($data);
     }
 
+    public function revenueGrouped(Request $request)
+    {
+        $validated = $request->validate([
+            'dimension' => 'required|in:homestay,customer,room_type,month,quarter',
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+        ]);
+
+        $data = $this->dashboard->getRevenueGrouped(
+            $validated['dimension'],
+            Carbon::parse($validated['from']),
+            Carbon::parse($validated['to']),
+        );
+
+        return $this->success($data);
+    }
+
     public function occupancyDetail(Request $request)
     {
         $request->validate([
