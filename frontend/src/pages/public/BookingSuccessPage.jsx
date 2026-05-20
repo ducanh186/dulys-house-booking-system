@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Calendar, BedDouble, Hash, Home, Users, CreditCard, ShieldCheck, Sparkles, ArrowRight, CheckCircle2, QrCode, ReceiptText } from 'lucide-react';
+import { Calendar, BedDouble, Hash, Home, Users, CreditCard, ShieldCheck, Sparkles, ArrowRight, CheckCircle2, ReceiptText } from 'lucide-react';
 import { getBooking } from '../../api/bookings';
 import { Card, CardContent } from '../../components/ui/Card';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -74,7 +74,6 @@ export default function BookingSuccessPage() {
   const roomTypeName = state?.roomTypeName || booking.details?.[0]?.room_type?.name || 'Loại phòng';
   const roomImage = state?.roomImage || booking.homestay?.thumbnail || '';
   const paymentMethod = state?.paymentMethod || booking.payments?.[0]?.method || 'transfer';
-  const payment = booking.payments?.[0] || null;
   const detailPath = `/my-profile/bookings/${booking.id}`;
   const successVariant = state?.successVariant || searchParams.get('event') || '';
   const isConfirmedExperience = CONFIRMED_SUCCESS_VARIANTS.has(successVariant);
@@ -82,7 +81,7 @@ export default function BookingSuccessPage() {
   const supportEmail = booking.homestay?.email || 'support@dulyshouse.vn';
 
   if (isConfirmedExperience) {
-    const nextSteps = buildConfirmationSteps({ booking, supportPhone, supportEmail });
+    const nextSteps = buildConfirmationSteps({ booking, supportPhone, supportEmail }).slice(1);
 
     return (
       <div className="min-h-screen bg-[linear-gradient(180deg,#fffaf4_0%,#fffefb_36%,#f7fbff_100%)]">
@@ -106,37 +105,7 @@ export default function BookingSuccessPage() {
                 </p>
               </div>
 
-              <div className="mt-8 grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
-                <div className="rounded-[32px] border border-[#ffe0cc] bg-[#fff7f2] p-5">
-                  <p className="text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-[#ea580c]">
-                    Mã QR xác nhận
-                  </p>
-                  <div className="mt-5 flex min-h-[280px] items-center justify-center rounded-[28px] border border-white bg-white p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                    {payment?.qr_payload ? (
-                      <img
-                        src={payment.qr_payload}
-                        alt={`Mã QR đơn ${booking.booking_code}`}
-                        className="h-56 w-56 rounded-[24px] border border-border object-contain"
-                        loading="eager"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="flex w-full max-w-[220px] flex-col items-center gap-4 rounded-[26px] border border-dashed border-[#fdba74] bg-[#fffaf7] px-6 py-8 text-center">
-                        <span className="inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#fff1e6] text-[#f97316]">
-                          <QrCode className="h-8 w-8" />
-                        </span>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.22em] text-on-surface-variant">Mã đơn</p>
-                          <p className="mt-2 font-headline text-2xl font-bold text-on-surface">{booking.booking_code}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-4 text-center text-sm leading-6 text-on-surface-variant">
-                    Vui lòng lưu lại thông tin đơn để đối chiếu khi làm thủ tục tại homestay.
-                  </p>
-                </div>
-
+              <div className="mx-auto mt-8 max-w-2xl">
                 <div className="space-y-4">
                   <div className="rounded-[32px] border border-border bg-white p-5">
                     <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
@@ -159,10 +128,10 @@ export default function BookingSuccessPage() {
                   <div className="rounded-[32px] border border-[#d8e8f9] bg-[#f8fcff] p-5">
                     <p className="text-sm font-semibold text-on-surface">Các bước tiếp theo</p>
                     <div className="mt-4 space-y-3">
-                      {nextSteps.map((step, index) => (
+                      {nextSteps.map((step) => (
                         <div key={step.title} className="flex items-start gap-3 rounded-[22px] border border-white bg-white px-4 py-3">
                           <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fff1e6] text-[11px] font-bold text-[#ea580c]">
-                            {index + 1}
+                            •
                           </span>
                           <div>
                             <p className="text-sm font-semibold text-on-surface">{step.title}</p>
