@@ -271,6 +271,7 @@ function OfflineBookingForm({ onCreated }) {
     check_in: tomorrow.toISOString().slice(0, 10),
     check_out: dayAfterTomorrow.toISOString().slice(0, 10),
     guest_count: '1',
+    homestay_id: '',
     room_type_id: '',
     quantity: '1',
     payment_method: 'transfer',
@@ -280,6 +281,21 @@ function OfflineBookingForm({ onCreated }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const homestayOptions = useMemo(() => {
+    const map = new Map();
+    for (const roomType of roomTypes) {
+      if (roomType.homestay?.id && !map.has(roomType.homestay.id)) {
+        map.set(roomType.homestay.id, roomType.homestay);
+      }
+    }
+    return Array.from(map.values());
+  }, [roomTypes]);
+
+  const filteredRoomTypes = useMemo(() => {
+    if (!form.homestay_id) return roomTypes;
+    return roomTypes.filter((roomType) => String(roomType.homestay?.id) === String(form.homestay_id));
+  }, [form.homestay_id, roomTypes]);
+
   useEffect(() => {
     let alive = true;
     getRoomTypes(1, { active_only: 1, per_page: 100 })
@@ -287,7 +303,11 @@ function OfflineBookingForm({ onCreated }) {
         const list = normalizeCollection(response);
         if (!alive) return;
         setRoomTypes(list);
-        setForm((prev) => ({ ...prev, room_type_id: prev.room_type_id || list[0]?.id || '' }));
+        setForm((prev) => ({
+          ...prev,
+          homestay_id: prev.homestay_id || list[0]?.homestay?.id || '',
+          room_type_id: prev.room_type_id || list[0]?.id || '',
+        }));
       })
       .catch(() => {
         if (alive) setError('Không thể tải danh sách loại phòng.');
@@ -299,7 +319,16 @@ function OfflineBookingForm({ onCreated }) {
   }, []);
 
   function updateField(name, value) {
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      if (name === 'homestay_id') {
+        const nextRoomType = value
+          ? roomTypes.find((roomType) => String(roomType.homestay?.id) === String(value))
+          : roomTypes[0];
+        return { ...prev, homestay_id: value, room_type_id: nextRoomType?.id || '' };
+      }
+
+      return { ...prev, [name]: value };
+    });
     setError('');
     setMessage('');
   }
@@ -347,14 +376,21 @@ function OfflineBookingForm({ onCreated }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-5 sm:p-6">
-        <form onSubmit={handleSubmit} className="grid gap-3 lg:grid-cols-4">
+        <form onSubmit={handleSubmit} className="grid gap-3 lg:grid-cols-5">
           <input className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Tên khách hàng" value={form.customer_name} onChange={(e) => updateField('customer_name', e.target.value)} />
           <input className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Số điện thoại" value={form.customer_phone} onChange={(e) => updateField('customer_phone', e.target.value)} />
           <input className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Email" type="email" value={form.customer_email} onChange={(e) => updateField('customer_email', e.target.value)} />
+          <select className="rounded-2xl border border-border px-4 py-3 text-sm" value={form.homestay_id} onChange={(e) => updateField('homestay_id', e.target.value)}>
+            {homestayOptions.map((homestay) => (
+              <option key={homestay.id} value={homestay.id}>
+                {homestay.name}
+              </option>
+            ))}
+          </select>
           <select className="rounded-2xl border border-border px-4 py-3 text-sm" value={form.room_type_id} onChange={(e) => updateField('room_type_id', e.target.value)}>
-            {roomTypes.map((roomType) => (
+            {filteredRoomTypes.map((roomType) => (
               <option key={roomType.id} value={roomType.id}>
-                {roomType.name} {roomType.homestay?.name ? `- ${roomType.homestay.name}` : ''}
+                {roomType.name}
               </option>
             ))}
           </select>

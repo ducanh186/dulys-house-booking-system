@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   Bar,
   BarChart,
   Cell,
   CartesianGrid,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -17,12 +14,10 @@ import {
 } from 'recharts';
 import {
   ArrowRight,
-  BarChart3,
   CalendarDays,
   CircleDollarSign,
   HandCoins,
   PieChart as PieChartIcon,
-  Printer,
   ShieldAlert,
   Sparkles,
   TrendingUp,
@@ -30,10 +25,7 @@ import {
 import {
   getRevenueByHomestay,
   getRevenueGrouped,
-  getOccupancyReport,
-  getOccupancyDetailReport,
   getCancellationReport,
-  getAdminHomestays,
 } from '../../api/admin';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
@@ -42,7 +34,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 
 const TABS = [
   { key: 'revenue', label: 'Doanh thu', icon: CircleDollarSign },
-  { key: 'occupancy', label: 'Công suất', icon: BarChart3 },
   { key: 'cancellations', label: 'Hủy phòng', icon: ShieldAlert },
 ];
 
@@ -82,32 +73,6 @@ function formatMonthLabel(month) {
   return `T${Number(m)}/${year.slice(2)}`;
 }
 
-function formatNumber(value, digits = 1) {
-  return Number(value || 0).toLocaleString('vi-VN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: digits,
-  });
-}
-
-function cleanupOccupancyPrintMode() {
-  if (typeof document === 'undefined') return;
-  document.body.classList.remove('printing-occupancy-report');
-}
-
-function scheduleOccupancyPrint() {
-  if (typeof document === 'undefined' || typeof window === 'undefined') return;
-
-  document.body.classList.add('printing-occupancy-report');
-  window.addEventListener('afterprint', cleanupOccupancyPrintMode, { once: true });
-
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      window.print();
-      window.setTimeout(cleanupOccupancyPrintMode, 300);
-    });
-  });
-}
-
 function SummaryCard({ icon, label, value, hint }) {
   const Icon = icon;
   Icon;
@@ -141,19 +106,7 @@ export default function ReportsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [homestayId, setHomestayId] = useState('');
   const [revenueDimension, setRevenueDimension] = useState('homestay');
-  const [homestays, setHomestays] = useState([]);
-  const [printReport, setPrintReport] = useState(null);
-  const [printing, setPrinting] = useState(false);
-
-  async function loadHomestays() {
-    if (homestays.length) return homestays;
-    const response = await getAdminHomestays(1);
-    const list = normalizeCollection(response);
-    setHomestays(list);
-    return list;
-  }
 
   async function loadReport() {
     setLoading(true);
@@ -164,8 +117,6 @@ export default function ReportsPage() {
         response = revenueDimension === 'homestay'
           ? await getRevenueByHomestay({ from, to })
           : await getRevenueGrouped({ from, to, dimension: revenueDimension });
-      } else if (tab === 'occupancy') {
-        response = await getOccupancyReport({ from, to, homestay_id: homestayId || undefined });
       } else {
         response = await getCancellationReport({ from, to });
       }
@@ -177,22 +128,6 @@ export default function ReportsPage() {
       setLoading(false);
     }
   }
-
-  async function handlePrintOccupancy() {
-    setPrinting(true);
-    setError('');
-    try {
-      const response = await getOccupancyDetailReport({ from, to, homestay_id: homestayId || undefined });
-      setPrintReport(response?.data ?? response ?? null);
-      scheduleOccupancyPrint();
-    } catch {
-      setError('Không thể tải dữ liệu in báo cáo.');
-    } finally {
-      setPrinting(false);
-    }
-  }
-
-  useEffect(() => cleanupOccupancyPrintMode, []);
 
   useEffect(() => {
     loadReport();
@@ -206,11 +141,6 @@ export default function ReportsPage() {
     return [];
   }, [tab, data]);
 
-  const normalizedOccupancy = useMemo(() => {
-    const value = tab === 'occupancy' ? data : [];
-    return Array.isArray(value) ? value : [];
-  }, [tab, data]);
-
   const cancellation = useMemo(() => {
     return tab === 'cancellations' && data ? data : null;
   }, [tab, data]);
@@ -221,16 +151,6 @@ export default function ReportsPage() {
     const avgValue = bookingCount > 0 ? totalRevenue / bookingCount : 0;
     return { totalRevenue, bookingCount, avgValue };
   }, [data, normalizedRevenue]);
-
-  const occupancySummary = useMemo(() => {
-    if (!normalizedOccupancy.length) return { average: 0, peak: 0, trough: 0 };
-    const values = normalizedOccupancy.map((item) => Number(item.occupancy || 0));
-    return {
-      average: values.reduce((sum, value) => sum + value, 0) / values.length,
-      peak: Math.max(...values),
-      trough: Math.min(...values),
-    };
-  }, [normalizedOccupancy]);
 
   const cancellationData = useMemo(() => {
     if (!cancellation) return [];
@@ -254,7 +174,7 @@ export default function ReportsPage() {
               Báo cáo hệ thống
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-on-surface-variant sm:text-base">
-              Chuyển đổi giữa doanh thu, công suất và hủy phòng trong một luồng phân tích thống nhất.
+              Chuyển đổi giữa doanh thu và hủy phòng trong một luồng phân tích thống nhất.
             </p>
 
             <div className="flex flex-wrap gap-3">
@@ -268,18 +188,6 @@ export default function ReportsPage() {
                 <Sparkles className="h-4 w-4" />
                 Làm mới dữ liệu
               </Button>
-              {tab === 'occupancy' && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePrintOccupancy}
-                  disabled={printing}
-                  className="gap-2 rounded-full"
-                >
-                  <Printer className="h-4 w-4" />
-                  {printing ? 'Đang chuẩn bị...' : 'In báo cáo'}
-                </Button>
-              )}
             </div>
           </div>
 
@@ -311,27 +219,6 @@ export default function ReportsPage() {
                   />
                 </div>
               </div>
-
-              {tab === 'occupancy' && (
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-                    Cơ sở
-                  </label>
-                  <select
-                    value={homestayId}
-                    onChange={(e) => setHomestayId(e.target.value)}
-                    onFocus={loadHomestays}
-                    className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary"
-                  >
-                    <option value="">Tất cả cơ sở</option>
-                    {homestays.map((homestay) => (
-                      <option key={homestay.id} value={homestay.id}>
-                        {homestay.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {tab === 'revenue' && (
                 <div>
@@ -494,56 +381,6 @@ export default function ReportsPage() {
             </div>
           )}
 
-          {tab === 'occupancy' && (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <SummaryCard icon={BarChart3} label="Công suất TB" value={`${occupancySummary.average.toFixed(1)}%`} hint="Trung bình trong kỳ" />
-                <SummaryCard icon={TrendingUp} label="Đỉnh công suất" value={`${occupancySummary.peak.toFixed(1)}%`} hint="Ngày cao nhất" />
-                <SummaryCard icon={CalendarDays} label="Thấp nhất" value={`${occupancySummary.trough.toFixed(1)}%`} hint="Ngày thấp nhất" />
-              </div>
-
-              <Card className="admin-card">
-                <CardHeader className="border-b border-border/60 px-6 py-5">
-                  <CardTitle className="font-headline text-lg font-extrabold text-on-surface">
-                    Công suất theo ngày
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-on-surface-variant">
-                    Theo cơ sở và giai đoạn đã chọn
-                  </p>
-                </CardHeader>
-                <CardContent className="p-5 sm:p-6">
-                  {normalizedOccupancy.length ? (
-                    <div className="h-[340px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={normalizedOccupancy}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#d6ebf7" />
-                          <XAxis dataKey="date" tickFormatter={(value) => String(value).slice(5)} tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 11 }} />
-                          <Tooltip formatter={(value) => [`${value}%`, 'Công suất']} />
-                          <Line
-                            type="monotone"
-                            dataKey="occupancy"
-                            stroke="#386360"
-                            strokeWidth={3}
-                            dot={{ r: 4 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <EmptyState
-                      icon={BarChart3}
-                      title="Chưa có dữ liệu công suất"
-                      description="API occupancy sẽ trả mốc công suất theo ngày tại đây."
-                      className="min-h-[340px]"
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
           {tab === 'cancellations' && cancellation && (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-3">
@@ -635,88 +472,6 @@ export default function ReportsPage() {
         </>
       )}
       </div>
-      <OccupancyPrintReport report={printReport} from={from} to={to} />
     </>
-  );
-}
-
-function OccupancyPrintReport({ report, from, to }) {
-  const rows = report?.rows ?? [];
-  const summary = report?.summary ?? {};
-  const printedAt = new Date().toLocaleString('vi-VN');
-
-  if (!report) {
-    return null;
-  }
-
-  return createPortal(
-    <section className="occupancy-print-report hidden bg-white text-black" aria-hidden="true">
-      <div className="occupancy-print-page mx-auto max-w-[980px] px-6 py-6 font-sans text-[12px]">
-        <div className="text-center">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-slate-500">Duly's House Manager</p>
-          <h1 className="text-xl font-bold uppercase tracking-wide text-slate-800">Báo cáo hiệu suất phòng</h1>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between border-b border-slate-300 pb-3 text-[11px] text-slate-600">
-          <span>Kỳ báo cáo: {formatDate(from)} - {formatDate(to)}</span>
-          <span>Xuất lúc: {printedAt}</span>
-        </div>
-
-        <h2 className="mt-6 text-sm font-bold uppercase underline">Bảng chi tiết công suất phòng</h2>
-        <table className="mt-3 w-full border-collapse text-[11px]">
-          <thead>
-            <tr className="border-y border-slate-400 text-left">
-              <th className="py-2 pr-2">STT</th>
-              <th className="py-2 pr-2">Cơ sở</th>
-              <th className="py-2 pr-2">Phòng / Loại phòng</th>
-              <th className="py-2 pr-2 text-right">Số ngày sử dụng</th>
-              <th className="py-2 pr-2 text-right">Tổng số ngày</th>
-              <th className="py-2 pr-2 text-right">Công suất (%)</th>
-              <th className="py-2 pr-2 text-right">Số lượt đặt</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={row.room_id} className="border-b border-slate-300 align-top">
-                <td className="py-2 pr-2">{index + 1}</td>
-                <td className="py-2 pr-2">{row.homestay_name}</td>
-                <td className="py-2 pr-2">
-                  <span className="font-semibold">{row.room_code}</span>
-                  <span className="text-slate-500"> ({row.room_type_name})</span>
-                </td>
-                <td className="py-2 pr-2 text-right">{formatNumber(row.used_days, 1)}</td>
-                <td className="py-2 pr-2 text-right">{row.period_days}</td>
-                <td className="py-2 pr-2 text-right">{formatNumber(row.occupancy_rate, 1)}%</td>
-                <td className="py-2 pr-2 text-right">{row.booking_count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <h2 className="mt-8 text-sm font-bold uppercase underline">Tổng kết công suất phòng</h2>
-        <div className="mt-3 divide-y divide-slate-300 border-y border-slate-400 text-[11px]">
-          <SummaryPrintRow label="Công suất trung bình toàn cơ sở" value={`${formatNumber(summary.average_occupancy, 1)}%`} />
-          <SummaryPrintRow
-            label="Phòng/loại phòng có công suất cao nhất"
-            value={summary.highest_room ? `${summary.highest_room.room_code} (${summary.highest_room.room_type_name}) - ${formatNumber(summary.highest_room.occupancy_rate, 1)}%` : 'Không có'}
-          />
-          <SummaryPrintRow
-            label="Phòng/loại phòng có công suất thấp nhất"
-            value={summary.lowest_room ? `${summary.lowest_room.room_code} (${summary.lowest_room.room_type_name}) - ${formatNumber(summary.lowest_room.occupancy_rate, 1)}%` : 'Không có'}
-          />
-          <SummaryPrintRow label="Tổng số phòng được sử dụng trong kỳ" value={summary.total_used_days ?? 0} />
-        </div>
-      </div>
-    </section>,
-    document.body
-  );
-}
-
-function SummaryPrintRow({ label, value }) {
-  return (
-    <div className="grid grid-cols-[1fr_220px] gap-4 py-2">
-      <span className="font-semibold">{label}</span>
-      <span>{value}</span>
-    </div>
   );
 }

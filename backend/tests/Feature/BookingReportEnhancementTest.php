@@ -108,6 +108,30 @@ class BookingReportEnhancementTest extends TestCase
             ->assertJsonPath('data.0.room_type.id', $firstRoomType->id);
     }
 
+    public function test_admin_booking_list_can_filter_by_customer_and_status(): void
+    {
+        [, $roomType] = $this->createInventory('Duly House History', 'Studio');
+        $targetBooking = $this->createPaidBooking($roomType, now()->subDays(5), now()->subDays(3), [
+            'customer_name' => 'Khach Can Loc',
+        ]);
+        $this->createPaidBooking($roomType, now()->subDays(4), now()->subDays(2), [
+            'customer_name' => 'Khach Khac',
+        ]);
+
+        Sanctum::actingAs(User::factory()->create(['role' => 'admin']));
+
+        $response = $this->getJson('/api/admin/bookings?' . http_build_query([
+            'customer_id' => $targetBooking->customer_id,
+            'status' => 'checked_out',
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $targetBooking->id)
+            ->assertJsonPath('data.0.customer.id', $targetBooking->customer_id);
+    }
+
     public function test_admin_can_get_revenue_grouped_by_supported_dimensions(): void
     {
         [$homestay, $roomType] = $this->createInventory('Duly House Report', 'Penthouse');

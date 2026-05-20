@@ -174,6 +174,10 @@ class AdminBookingController extends Controller
             $query->where('status', $request->query('status'));
         }
 
+        if (!in_array('customer_id', $except, true) && $request->filled('customer_id')) {
+            $query->where('customer_id', $request->query('customer_id'));
+        }
+
         if (!in_array('room_type_id', $except, true) && $request->filled('room_type_id')) {
             $query->whereHas('details', fn ($detailQuery) => $detailQuery
                 ->where('room_type_id', $request->query('room_type_id')));
